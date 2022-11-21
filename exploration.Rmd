@@ -54,13 +54,17 @@ mandates.by.state$full_state_name <- c("Alaska", "Alabama", "Arkansas",
                                        "Vermont", "Washington", "Wisconsin", 
                                        "West Virginia", "Wyoming")
 mandates.by.state <- mandates.by.state[,c(3,2)]
+
+
+full.cases <- merge(merged.cases, mandates.by.state, by.x="FIPS.state.code", 
+      by.y="full_state_name")
 ```
 
 ```{r, eval=T}
-full.cases <- merge(merged.cases, mandates.by.state, by.x="FIPS.state.code", 
-      by.y="full_state_name")
-
+write.csv(full.cases, file="data/full_cases.csv")
 ```
+
+
 
 
 
