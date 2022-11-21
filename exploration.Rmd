@@ -1,0 +1,18 @@
+---
+title: "exploration"
+author: "Daniel de Castro"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction 
+
+```{r, eval=T}
+colleges <- read.csv("data/colleges.csv")
+ipeds <- read.csv("data/ipeds.csv")
+merg <- read.csv("data/merged_cases.csv")
+```
