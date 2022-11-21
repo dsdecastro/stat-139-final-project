@@ -14,5 +14,53 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, eval=T}
 colleges <- read.csv("data/colleges.csv")
 ipeds <- read.csv("data/ipeds.csv")
-merg <- read.csv("data/merged_cases.csv")
+merged.cases <- read.csv("data/merged_cases.csv")
 ```
+
+```{r, eval=T}
+mask.mandates <- read.csv("data/U.S._State_and_Territorial_Public_Mask_Mandates_From_April_8__2020_through_August_15__2021_by_State_by_Day.csv")
+factor.variables <- c("Face_Masks_Required_in_Public", "State_Tribe_Territory", "order_code")
+mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.factor)
+```
+
+```{r, eval=T}
+mandates.by.state <- data.frame(state=unique(mask.mandates$State_Tribe_Territory))
+mandates.by.state$number_of_days_mandated <- 0
+for (i in 1:length(unique(mandates.by.state$state))) {
+  dummy <- mask.mandates$Face_Masks_Required_in_Public[mask.mandates$State_Tribe_Territory == mandates.by.state$state[i]]
+  dummy[is.na(dummy)] <- "No"
+  mandates.by.state$number_of_days_mandated[mandates.by.state$state == mandates.by.state$state[i]] = sum(dummy == "Yes")
+}
+mandates.by.state$full_state_name <- c("Alaska", "Alabama", "Arkansas", 
+                                       "American Samoa", "Arizona", 
+                                       "California", "Colorado", 
+                                       "District of Columbia", "Connecticut", 
+                                       "Florida", "Delaware", "Georgia", "Guam", 
+                                       "Iowa", "Hawaii", "Idaho", "Illinois", 
+                                       "Indiana", "Kansas", "Kentucky", 
+                                       "Louisiana", "Massachusetts", 
+                                       "Minnesota", "Maryland", "Maine", 
+                                       "Michigan", "Missouri", 
+                                       "Northern Mariana Islands", 
+                                       "Mississippi", "Montana", 
+                                       "North Carolina", "North Dakota", 
+                                       "Nebraska", "New Hampshire", "Nevada", 
+                                       "New Jersey", "New Mexico", "Ohio", 
+                                       "New York", "Oklahoma", "Oregon", 
+                                       "South Carolina", "Rhode Island", 
+                                       "Pennsylvania", "Puerto Rico", 
+                                       "South Dakota", "Tennessee", "Texas", 
+                                       "Utah", "Virginia", "Virgin Islands", 
+                                       "Vermont", "Washington", "Wisconsin", 
+                                       "West Virginia", "Wyoming")
+mandates.by.state <- mandates.by.state[,c(3,2)]
+```
+
+```{r, eval=T}
+full.cases <- merge(merged.cases, mandates.by.state, by.x="FIPS.state.code", 
+      by.y="full_state_name")
+
+```
+
+
+
