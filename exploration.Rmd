@@ -65,6 +65,4 @@ write.csv(full.cases, file="data/full_cases.csv")
 ```
 
 
-n n
-
 
