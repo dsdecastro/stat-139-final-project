@@ -1,0 +1,53 @@
+---
+title: "finalproject"
+output: html_document
+date: "2022-11-22"
+---
+
+```{r}
+df <- read.csv("full_cases.csv")
+
+colnames(df)
+
+df = df[,-c(1,3)]
+
+colnames(df)
+
+hist(df$cases)
+hist(na.omit((df$cases)^(1/5)))
+# the issue with the log and the reason why I did the 1/6 above is because 
+# there are a lot of 0 entries. This makes them infinite with the log and it 
+# messes with the linear regression. I am not sure what you do in this instance.
+hist(na.omit(log(df$cases)))
+
+hist(df$cases_2021)
+
+# this shows that religious institutions are not as large as the largest non-religious
+# this is because of large public non-religious schools
+# once accounting for size, median case count higher for religious.
+boxplot(df$cases ~ df$religious)
+boxplot((df$cases  / df$total.headcount) ~ df$religious)
+
+df$religious = as.factor(df$religious)
+
+df$FIPS.state.code = as.factor(df$FIPS.state.code)
+df$control = as.factor(df$control)
+df$occupational.degree = as.factor(df$occupational.degree)
+df$academic.degree = as.factor(df$academic.degree)
+df$hs.equivelant.degree = as.factor(df$hs.equivelant.degree)
+df$NCAA.football = as.factor(df$NCAA.football)
+df$on.campus.housing = as.factor(df$on.campus.housing)
+df$catholic.religious = as.factor(df$catholic.religious)
+
+
+summary(lm1 <- lm(cases ~ religious, df))
+summary(lm2 <- lm(cases^(1/5) ~ religious, df))
+
+summary(lm3 <- lm(cases ~ religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated + total.headcount, df))
+
+summary(lm4 <- lm(cases ~ (religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated)*total.headcount, df))
+
+# looking at ridge would be good but they say just a baseline model for EPA. 
+
+```
+
