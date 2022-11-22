@@ -13,9 +13,23 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 ```
 
+## Description of data and source
+
+Data comes from two sources: 
+
+1. [NYTimes Covid-19 Data](https://github.com/nytimes/covid-19-data/tree/master/colleges). This is publicly available on GitHub and was the source for some of the NYTimes maps and data visuals during the 2020-2021 era of the pandemic. It includes cases from 2020 - May 2021, and we have specifically selected cases at Universities. This dataset has 1948 entries and includes 2020 cases, 2021 cases, University IPEDS ID, University Name, State, etc. 
+
+2. [IPEDS Data Center](https://nces.ed.gov/ipeds/use-the-data). This is publicly available data on colleges across the globe. It has many possible variables including demographics, admission rates, University affiliation, etc. The IPEDS data center allowed us to select certain Universities and variables. The smallest subset of Universities that included all from the NYTimes database (by IPEDS ID) was 6125 rows, with all US Universities. 
+
+The data is 1,855 rows after removing Universities without stats or without matching IPEDS ids. It has 40 columns, including IPEDS id, university name, cases, and predictor variables based on college attributes. 
+
+## EDA / Visuals of data
+
 For this exploratory data analysis, the first step is to read our data from CSV files into R data frames. The `colleges` data frame stores the NYT data on Covid cases at universities, while the `ipeds` data frame stores the data will most of our predictor variables (university characteristics) taken from IPEDS. We then rename most of the columns in `ipeds` to make them shorter and easier to work with. 
 
-```{r, eval=T}
+<!-- Laura's work  -->
+
+```{r, eval=T, echo = FALSE}
 # Read colleges from csv
 colleges <- read.csv("data/colleges.csv")[,-c(1,9)]
 
@@ -77,7 +91,7 @@ ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation',
 
 
 
-```{r, eval=T}
+```{r, eval=T, echo = FALSE}
 # Merge data frames, and remove duplicated "state" column 
 md <- merge(ipeds, colleges, by="ipeds_id")[,-32]
 
@@ -101,16 +115,16 @@ md[md$control == "Private not-for-profit (religious affiliation)",]$control <- "
 write.csv(md,'merged_cases.csv')
 ```
 
-## Daniel's work 
+<!-- Daniel's work  -->
 
-```{r, eval=T}
+```{r, eval=T, echo = FALSE}
 mask.mandates <- read.csv("data/U.S._State_and_Territorial_Public_Mask_Mandates_From_April_8__2020_through_August_15__2021_by_State_by_Day.csv")
 factor.variables <- c("Face_Masks_Required_in_Public", "State_Tribe_Territory", "order_code")
 mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.factor)
 mask.mandates$date <- as.Date(mask.mandates$date, format="%m/%d/%Y")
 ```
 
-```{r, eval=T}
+```{r, eval=T, echo = FALSE}
 mandates.by.state <- data.frame(state=unique(mask.mandates$State_Tribe_Territory))
 mandates.by.state$number_of_days_mandated <- 0
 for (i in 1:length(unique(mandates.by.state$state))) {
@@ -153,49 +167,78 @@ full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
 write.csv(full.cases, file="data/full_cases.csv")
 ```
 
-## Laura's work 
+<!-- Laura's work  -->
 
-```{r, eval=T}
+We will first look at the disribution of the cases from the NYTimes data. 
+
+```{r, eval=T, echo = FALSE}
 # TODO: CONSIDER CHANGING THIS EPSILON VALUE TO GIVE BETTER PLOTS 
 epsilon <- 0.001
 
-hist(full.cases$cases)
-hist(log(full.cases$cases + epsilon))
+full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
 
-hist(full.cases$cases_2021)
-hist(log(full.cases$cases_2021 + epsilon))
+# Looking at 2020 cases 
+par(mfrow = c(1, 2))
+hist(full.cases$cases, main = "2020 Cases")
+hist(log(full.cases$cases + epsilon), main = "Log transformed 2020 Cases + epsilon")
 
-hist(full.cases$total.cases)
-hist(log(full.cases$total.cases + epsilon))
+length(full.cases[full.cases$cases == 0,])
+```
 
+From the above graphs we see that the un-transformed NYTimes case data from 2020 is strongly right skewed. In particular, there are 38 universities in the dataset that recorded 0 Covid cases in 2020. Log transforming this data (+ arbitrary epsilon of 0.001) results in a more normally distributed data with some negative outliers on the left. This is from the 38 Universities that reported no cases. 
+
+We will now look at total cases (for 2020 and 2021), below. 
+
+```{r, echo = FALSE}
+# Looking at just 2021 cases
+#hist(full.cases$cases_2021)
+#hist(log(full.cases$cases_2021 + epsilon))
+
+# Looking at all cases 
+par(mfrow = c(1, 2))
+hist(full.cases$total.cases, main = "All Cases")
+hist(log(full.cases$total.cases + epsilon), main = "Log transformed All Cases + epsilon")
+
+length(full.cases[full.cases$total.cases == 0,])
+
+```
+
+There are still 38 institutions with no reported covid cases. The resulting plots are nearly identical to the 2020-only plots above. The main difference is that there are simply some more cases reported, extending the lines of the histogram vertically when on the same scale. 
+
+Given that we are focusing on the relationship between the religious afflition of an institution and its 2020/2021 Covid cases, we will also look at a simple boxplot quantile breakdown between religious and non-religious institutions: 
+
+```{r, echo = FALSE}
 # this shows that religious institutions are not as large as the largest non-religious
 # this is because of large public non-religious schools
 # once accounting for size, median case count higher for religious.
-boxplot((total.cases  / total.headcount) ~ religious, data=full.cases)
+boxplot((total.cases  / total.headcount) ~ religious, data=full.cases, main = "Total cases in total headcount by binary religious affiliation")
 
 # Convert necessary columns to factors 
-factor.variables <- c("religious", "FIPS.state.code", "control", "occupational.degree", "academic.degree", "hs.equivalent.degree", "NCAA.football", "on.campus.housing", "catholic")
+factor.variables <- c("religious", "FIPS.state.code", "control", "occupational.degree", "academic.degree", "hs.equivelant.degree", "NCAA.football", "on.campus.housing", "catholic.religious")
 full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
+
+table(full.cases$religious)
 ```
+Above we see that (when accounting for school size via `total.headcount`) the median number of cases (by percent) at religious universities slightly higher than that of non-religious schools and the 75th quartile much higher. But, the non-religious schools have a more visible right spread. This is likely because there are more non-religious institutions in the dataset (1372 vs 483 religious) and they likely represent a more diverse pool: non-regligious schools can be large public institutions (ie. The UC schools) or small private institutions (ie. Wesleyan). Religious schools are always private based on IPEDS classifications. 
 
-```{r, eval=T}
-summary(lm1 <- lm(total.cases ~ religious, full.cases))
-summary(lm2 <- lm(log(total.cases + epsilon) ~ religious, full.cases))
+## Baseline model for reference
 
-summary(lm3 <- lm(log(total.cases + epsilon) ~ religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated + total.headcount, full.cases))
+We explored several baseline models. Below we compared religious, control and tuition to the total cases from 2020 and 2021. 
+
+```{r, eval=T, echo = FALSE}
+lm1 <- lm(total.cases ~ religious, full.cases)
+summary(lm2 <- lm(log(total.cases + epsilon) ~ religious + control + tuition, full.cases))
+
+# summary(lm3 <- lm(log(total.cases + epsilon) ~ religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated + total.headcount, full.cases))
 
 lm4.predictors <- c("religious", "FIPS.state.code", "control", "percent.fin.aid", "tuition", "number_of_days_mandated", "total.headcount")
-summary(lm4 <- lm(log(total.cases + epsilon) ~ (religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated)*total.headcount, data=full.cases[complete.cases(full.cases[,lm4.predictors]),]))
+# summary(lm4 <- lm(log(total.cases + epsilon) ~ (religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated)*total.headcount, data=full.cases[complete.cases(full.cases[,lm4.predictors]),]))
+
 # NA predictors b/c of singularities: FIPS.state.code and number_of_days_mandated are highly collinear,
 # as the latter depends on the former 
+
 ```
 
+It appears that all variables have a positive relationship with cases, to varying degrees. Relationships exist between variables such as private not-for-profit universities all being non-religious mean that it is excluded on account of multicollinearity. 
 
-
-
-
-
-
-
-
-
+We will explore these relationships further, as well as add-onto our baseline model and explore other models. 
