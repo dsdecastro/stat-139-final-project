@@ -132,6 +132,7 @@ full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
 write.csv(full.cases, file="data/full_cases.csv")
 ```
 
+## Laura's work 
 
 ```{r, eval=T}
 # TODO: CONSIDER CHANGING THIS EPSILON VALUE TO GIVE BETTER PLOTS 
