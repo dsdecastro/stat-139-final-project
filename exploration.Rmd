@@ -21,9 +21,9 @@ Our data for this project comes from three sources:
 
 2. [IPEDS Data Center](https://nces.ed.gov/ipeds/use-the-data). This is publicly available data on colleges across the globe. It has many possible variables including demographics, admission rates, University affiliation, etc. The IPEDS data center allowed us to select certain Universities and variables. The smallest subset of Universities that included all from the NYTimes database (by IPEDS ID) was 6125 rows, with all US Universities. 
 
-The data is 1,855 rows after removing Universities without stats or without matching IPEDS ids. It has 40 columns, including IPEDS id, university name, cases, and predictor variables based on college attributes. 
-
 3. [Centers for Disease Control](https://data.cdc.gov/Policy-Surveillance/U-S-State-and-Territorial-Public-Mask-Mandates-Fro/tzyy-aayg). This publicly available data set tracks mask mandates in each state from April 8, 2020, to August 15, 2021. 
+
+The data is 1,855 rows after removing Universities without stats or without matching IPEDS ids. It has 40 columns, including IPEDS id, university name, cases, and predictor variables based on college attributes. 
 
 ## Data Cleaning Procedures
 
@@ -89,7 +89,7 @@ ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation',
                               ~'dorm.room.price')
 ```
 
-Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious`,`catholic`, and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop the `control` column from the data frame, since it now contains redundant information.
+Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious`, `catholic`, and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop the `control` column from the data frame, since it now contains redundant information.
 
 ```{r, eval=T, echo = FALSE}
 # Merge data frames, and remove duplicated "state" column 
@@ -119,7 +119,7 @@ md <- md[,-4]
 write.csv(md,'merged_cases.csv')
 ```
 
-We now look to add a column to the data frame that addresses the extent to which mask mandates were present in the state in which each institution is located. Below, we read out mask mandates data into a data frame from a CSV, treat the appropriate columns as factors, and convert `date` into R's `Date` type.  
+Finally, we look to add a column to the data frame that addresses the extent to which mask mandates were present in the state in which each institution is located. Below, we read out the mask mandates data from the CDC into a data frame from the CSV file, treat the appropriate columns as factors, and convert `date` into R's `Date` type.  
 
 ```{r, eval=T, echo = FALSE}
 # Read mask.mandates from CSV file
@@ -133,7 +133,7 @@ mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.
 mask.mandates$date <- as.Date(mask.mandates$date, format="%m/%d/%Y")
 ```
 
-Now, we create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and finally create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
+We then create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and finally create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
 
 ```{r, eval=T, echo = FALSE}
 # Create new data frame to merge with md
@@ -197,6 +197,7 @@ write.csv(full.cases, file="data/full_cases.csv")
 ## EDA / Data Visualizations
 
 We will first look at the distribution of the total cases from the NYT data. 
+\vspace{0.1in}
 
 ```{r, eval=T, echo = FALSE}
 # TODO: CONSIDER CHANGING THIS EPSILON VALUE TO GIVE BETTER PLOTS 
@@ -211,7 +212,7 @@ hist(log(full.cases$cases + epsilon),
 length(full.cases[full.cases$cases == 0,])
 ```
 
-From the above graphs we see that the un-transformed NYT case data from 2020 is strongly right skewed. In particular, there are 39 universities in the data set that recorded 0 Covid cases in 2020. Log transforming this data (and the inclusion of the arbitrary constant `epsilon = 0.001`) results in a more symmetrically distributed distribution with some negative outliers on the left. These outliers correspond to those observations with zero Covid cases in 2020.
+From the above graphs we see that the un-transformed NYT case data from 2020 is strongly right skewed. In particular, there are 39 universities in the data set that recorded 0 Covid cases in 2020. Log-transforming this data (and the inclusion of the arbitrary constant `epsilon = 0.001`) results in a more symmetrically distributed distribution with some negative outliers on the left. These outliers correspond to those observations with zero Covid cases in 2020.
 
 We will now have a look at the distribution of `total.cases` below. 
 
@@ -236,7 +237,7 @@ boxplot((total.cases  / total.headcount) ~ religious, data=full.cases,
 table(full.cases$religious)
 ```
 
-Above we see that the median number of cases as a fraction of total headcount (to account for differing school sizes) at religious universities is slightly higher than that of non-religious schools, and the 75th quartile much higher. Thus, there does seem to be some sort of difference in terms of case counts between the groups. In our actual project, we could formalize this observation by performing a parametric test for a difference in sample means, or some sort of non-parametric test (such as a rank-based test). Both distributions also appear to be somewhat right-skewed, but the distribution for non-religious intitutions possibly is more so. This is likely because there are more non-religious institutions in the dataset (1372 vs 483 religious) and they likely represent a more diverse pool: non-regligious schools can be large public institutions (ie. The UC schools) or small private institutions (ie. Wesleyan). Religious schools are always private based on IPEDS classifications. 
+Above we see that the median number of cases as a fraction of total headcount (to account for differing school sizes) at religious universities is slightly higher than that of non-religious schools, and the 75th quartile much higher. Thus, there does seem to be some sort of difference in terms of case counts between the groups. In our actual project, we could formalize this observation by performing a parametric test for a difference in sample means, or some sort of non-parametric test (such as a rank-based test). Both distributions also appear to be somewhat right-skewed, but the distribution for non-religious institutions is possibly more so. This is likely because there are more non-religious institutions in the data set (1372 vs 483 religious) and they likely represent a more diverse pool: non-religious schools can be large public institutions (i.e. The UC schools) or small private institutions (i.e. Wesleyan). Religious schools are always private based on IPEDS classifications. 
 
 ## Baseline Model
 
@@ -253,8 +254,8 @@ lm1 <- lm(log(total.cases + epsilon) ~ religious + FIPS.state.code +
 summary(lm1)
 ```
 
-As we can see from the R output above, a handful of these predictors were found to be significant at the $\alpha = 0.05$ level in this model, including `catholic`, `percent.disability`, and `dorm.capacity`. Importantly, `catholic` addresses our hypothesis as much as the predictor `religious`, since it makes a more specific claim about the religious affiliation about a particular institution. In this model, we find that `catholic` has a positive association with log-transformed `total.cases`. We also find that the coefficient estimates for `percent.disability` and `dorm.capacity` are negative, which is somewhat surprising: Our gut feeling would be to expect both of these predictors to have positive associations with `total.cases`, since having more immunocompromised students on campus (`disabled` is a somewhat flawed measure of this predictor) and having more students living in dorms on campus might be thought to increase case counts. It could be the case, however, that having more immunocompromised students and more students living on campus might prompt a university to take precautions against Covid more seriously. 
+As we can see from the R output above, a handful of these predictors were found to be significant at the $\alpha = 0.05$ level in this model, including `catholic`, `percent.disability`, and `dorm.capacity`. Importantly, `catholic` addresses our hypothesis, since it makes a specific claim about the religious affiliation about a particular institution. In this model, we find that `catholic` has a positive association with log-transformed `total.cases`. We also find that the coefficient estimates for `percent.disability` and `dorm.capacity` are negative, which is somewhat surprising: Our gut feeling would be to expect both of these predictors to have positive associations with `total.cases`, since having more immunocompromised students on campus (`disabled` is a somewhat flawed measure of this predictor) and having more students living in dorms on campus might be thought to increase Covid-19 transmission and case counts. It could be the case, however, that having more immunocompromised students and more students living on campus might prompt a university to take precautions against Covid more seriously. 
 
-It is also interesting that the model failed to produce coefficient estimates for `mask.mandated.days`. This is likely due to strong — indeed, almost perfect — collinearity between this predictor and `FIPS.state.code`, since each value of `FIPS.state.code` does indeed correspond to some specific and unchanging value in `mask.mandated.days`. Thus, it appears that, in the models that we will prepare for the final paper, we either need to include a more nuanced predictor variable reflecting mask mandates at each institution, or decide that we are happy with the representation of the presence of mask mandates at each school that will be captured by a predictor such as state or county. To that end, performing an ANOVA to test whether the mean of `total.cases` is different for institutions in each state or even each county might be an interesting exercise as we put together this final paper. 
+It is also interesting that the model failed to produce coefficient estimates for `mask.mandated.days`. This is likely due to strong — indeed, almost perfect — collinearity between this predictor and `FIPS.state.code`, since each value of `FIPS.state.code` does indeed correspond to some specific and unchanging value in `mask.mandated.days`. Thus, it appears that, in the models that we will prepare for the final paper, we either need to include a more nuanced predictor variable reflecting mask mandates at each institution, or decide that we are happy with the representation of the presence of mask mandates at each school that is captured by a predictor such as state or county. To that end, performing an ANOVA to test whether the mean of `total.cases` is different for institutions grouped by state or even county might be an interesting exercise as we put together this final paper. 
 
 
