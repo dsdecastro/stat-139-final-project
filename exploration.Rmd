@@ -1,5 +1,5 @@
 ---
-title: "exploration"
+title: "EDA"
 author: "Daniel de Castro"
 date: "`r Sys.Date()`"
 output: pdf_document
@@ -17,7 +17,7 @@ library(dplyr)
 
 ```{r, eval=T}
 # Read colleges from csv
-colleges <- read.csv("data/colleges.csv")
+colleges <- read.csv("data/colleges.csv")[,-c(1,9)]
 
 # Read ipeds from csv, drop unnecessary columns
 ipeds <- read.csv("data/ipeds.csv")
@@ -47,7 +47,7 @@ ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation', ~'co
                     rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.student.loans', ~'percent.student.loan') %>% 
                     rename_at('IC2021.Occupational', ~'occupational.degree') %>% 
                     rename_at('IC2021.Academic', ~'academic.degree') %>% 
-                    rename_at('IC2021.Adult.basic.remedial.or.high.school.equivalent', ~'hs.equivelant.degree') %>% 
+                    rename_at('IC2021.Adult.basic.remedial.or.high.school.equivalent', ~'hs.equivalent.degree') %>% 
                     rename_at('IC2021.Percent.of.undergraduates..who.are.formally.registered.as.students.with.disabilities..when.percentage.is.more.than.3.percent', ~'percent.disability') %>% 
                     rename_at('IC2021.NCAA.NAIA.conference.number.football', ~'NCAA.football') %>% 
                     rename_at('IC2021.Institution.provide.on.campus.housing', ~'on.campus.housing') %>% 
@@ -69,35 +69,18 @@ md[md$religious.affiliation == "Not applicable", ]$religious <- "No"
 
 # Create column 'catholic'
 md$catholic <- "Non-Catholic"
-md[md$religious.affiliation == "Not applicable",]$catholic.religious <- "No"
-md[md$religious.affiliation == "Roman Catholic",]$catholic.religious <- "Yes"
+md[md$religious.affiliation == "Not applicable",]$catholic <- "No"
+md[md$religious.affiliation == "Roman Catholic",]$catholic <- "Yes"
 
 # Make 'control' column simpler
 md[md$control == "Private not-for-profit (no religious affiliation)",]$control <- "Private not-for-profit"
 md[md$control == "Private not-for-profit (religious affiliation)",]$control <- "Private not-for-profit"
 
-for_lm = md
-
-for_lm$religious = as.factor(for_lm$religious)
-for_lm$control = as.factor(for_lm$control)
-for_lm$catholic.religious = as.factor(for_lm$catholic.religious)
-
-lm1 = lm(cases ~ religious, for_lm)
-summary(lm1)
-
-lm2 = lm(cases ~ control + catholic.religious + tuition + undergrad.headcount, for_lm)
-summary(lm2)
-
+# Write to csv 
 write.csv(md,'merged_cases.csv')
 ```
 
 ## Daniel's work 
-
-```{r, eval=T}
-colleges <- read.csv("data/colleges.csv")
-ipeds <- read.csv("data/ipeds.csv")
-md <- read.csv("data/merged_cases.csv")
-```
 
 ```{r, eval=T}
 mask.mandates <- read.csv("data/U.S._State_and_Territorial_Public_Mask_Mandates_From_April_8__2020_through_August_15__2021_by_State_by_Day.csv")
@@ -143,11 +126,54 @@ mandates.by.state <- mandates.by.state[,c(3,2)]
 
 full.cases <- merge(md, mandates.by.state, by.x="FIPS.state.code", 
       by.y="full_state_name")
+full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
+
+# Write to csv
+write.csv(full.cases, file="data/full_cases.csv")
+```
+
+
+```{r, eval=T}
+# TODO: CONSIDER CHANGING THIS EPSILON VALUE TO GIVE BETTER PLOTS 
+epsilon <- 0.001
+
+hist(full.cases$cases)
+hist(log(full.cases$cases + epsilon))
+
+hist(full.cases$cases_2021)
+hist(log(full.cases$cases_2021 + epsilon))
+
+hist(full.cases$total.cases)
+hist(log(full.cases$total.cases + epsilon))
+
+# this shows that religious institutions are not as large as the largest non-religious
+# this is because of large public non-religious schools
+# once accounting for size, median case count higher for religious.
+boxplot((total.cases  / total.headcount) ~ religious, data=full.cases)
+
+# Convert necessary columns to factors 
+factor.variables <- c("religious", "FIPS.state.code", "control", "occupational.degree", "academic.degree", "hs.equivalent.degree", "NCAA.football", "on.campus.housing", "catholic")
+full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
 ```
 
 ```{r, eval=T}
-write.csv(full.cases, file="data/full_cases.csv")
+summary(lm1 <- lm(total.cases ~ religious, full.cases))
+summary(lm2 <- lm(log(total.cases + epsilon) ~ religious, full.cases))
+
+summary(lm3 <- lm(log(total.cases + epsilon) ~ religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated + total.headcount, full.cases))
+
+lm4.predictors <- c("religious", "FIPS.state.code", "control", "percent.fin.aid", "tuition", "number_of_days_mandated", "total.headcount")
+summary(lm4 <- lm(log(total.cases + epsilon) ~ (religious + FIPS.state.code + control + percent.fin.aid + tuition + number_of_days_mandated)*total.headcount, data=full.cases[complete.cases(full.cases[,lm4.predictors]),]))
+# NA predictors b/c of singularities: FIPS.state.code and number_of_days_mandated are highly collinear,
+# as the latter depends on the former 
 ```
+
+
+
+
+
+
+
 
 
 
