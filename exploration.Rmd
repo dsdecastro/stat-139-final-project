@@ -1,7 +1,7 @@
 ---
-title: "EDA"
-author: "Daniel de Castro"
-date: "`r Sys.Date()`"
+title: "EDA: Characterizing the relationship between the religious affiliation and incidences of Covid-19 at U.S. universities."
+author: "Daniel de Castro and Laura Appleby"
+date: "November 22, 2022"
 output: pdf_document
 ---
 
@@ -9,11 +9,11 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Laura's work
-
-```{r, eval=T}
+```{r, eval=T, include=F}
 library(dplyr)
 ```
+
+For this exploratory data analysis, the first step is to read our data from CSV files into R data frames. The `colleges` data frame stores the NYT data on Covid cases at universities, while the `ipeds` data frame stores the data will most of our predictor variables (university characteristics) taken from IPEDS. We then rename most of the columns in `ipeds` to make them shorter and easier to work with. 
 
 ```{r, eval=T}
 # Read colleges from csv
@@ -24,36 +24,57 @@ ipeds <- read.csv("data/ipeds.csv")
 ipeds <- ipeds[-c(3, 8, 22)]
 
 # Rename columns of ipeds 
-ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation', ~'control') %>% 
+ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation', 
+                             ~'control') %>% 
                     rename_at('HD2021.FIPS.state.code', ~'FIPS.state.code') %>% 
                     rename_at('unitid', ~'ipeds_id') %>% 
-                    rename_at('IC2021.Religious.affiliation', ~'religious.affiliation') %>%
-                    rename_at('DRVIC2021.Tuition.and.fees..2020.21', ~'tuition') %>% 
-                    rename_at('DRVEF122021.Total.12.month.unduplicated.headcount', ~'total.headcount') %>% 
-                    rename_at('DRVEF122021.Undergraduate.12.month.unduplicated.headcount', ~'undergrad.headcount') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.American.Indian.or.Alaska.Native', ~'percent.american.native') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Asian', ~'percent.asian') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Black.or.African.American', ~'percent.black') %>% 
+                    rename_at('IC2021.Religious.affiliation', 
+                              ~'religious.affiliation') %>%
+                    rename_at('DRVIC2021.Tuition.and.fees..2020.21', 
+                              ~'tuition') %>% 
+                    rename_at('DRVEF122021.Total.12.month.unduplicated.headcount', 
+                              ~'total.headcount') %>% 
+                    rename_at('DRVEF122021.Undergraduate.12.month.unduplicated.headcount',
+                    ~'undergrad.headcount') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.American.Indian.or.Alaska.Native', 
+                              ~'percent.american.native') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Asian', 
+                              ~'percent.asian') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Black.or.African.American', 
+                              ~'percent.black') %>% 
                     rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Hispanic.Latino', ~'percent.hispanic.latino') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Native.Hawaiian.or.Other.Pacific.Islander', ~'percent.pacific.islander') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.White', ~'percent.white') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.two.or.more.races', ~'percent.two.more.races') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Native.Hawaiian.or.Other.Pacific.Islander', 
+                              ~'percent.pacific.islander') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.White', 
+                              ~'percent.white') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.two.or.more.races', 
+                              ~'percent.two.more.races') %>% 
                     rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.race.ethnicity.unknown', ~'percent.NA.race') %>% 
-                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Nonresident.Alien', ~'percent.nonres.alien') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Nonresident.Alien',
+                              ~'percent.nonres.alien') %>% 
                     rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.women', ~'percent.women') %>% 
                     rename_at('SFA2021.Average.amount.of.grant.and.scholarship.aid.awarded..2020.21', ~'avg.grant.money') %>% 
                     rename_at('DRVGR2021.Graduation.rate..total.cohort', ~'grad.rate') %>% 
-                    rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.any.financial.aid', ~'percent.fin.aid') %>% 
-                    rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.student.loans', ~'percent.student.loan') %>% 
+                    rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.any.financial.aid', 
+                              ~'percent.fin.aid') %>% 
+                    rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.student.loans', 
+                              ~'percent.student.loan') %>% 
                     rename_at('IC2021.Occupational', ~'occupational.degree') %>% 
                     rename_at('IC2021.Academic', ~'academic.degree') %>% 
-                    rename_at('IC2021.Adult.basic.remedial.or.high.school.equivalent', ~'hs.equivalent.degree') %>% 
-                    rename_at('IC2021.Percent.of.undergraduates..who.are.formally.registered.as.students.with.disabilities..when.percentage.is.more.than.3.percent', ~'percent.disability') %>% 
-                    rename_at('IC2021.NCAA.NAIA.conference.number.football', ~'NCAA.football') %>% 
-                    rename_at('IC2021.Institution.provide.on.campus.housing', ~'on.campus.housing') %>% 
-                    rename_at('IC2021.Total.dormitory.capacity', ~'dorm.capacity') %>% 
-                    rename_at('IC2021.Typical.room.charge.for.academic.year', ~'dorm.room.price')
+                    rename_at('IC2021.Adult.basic.remedial.or.high.school.equivalent', 
+                              ~'hs.equivalent.degree') %>% 
+                    rename_at('IC2021.Percent.of.undergraduates..who.are.formally.registered.as.students.with.disabilities..when.percentage.is.more.than.3.percent', 
+                              ~'percent.disability') %>% 
+                    rename_at('IC2021.NCAA.NAIA.conference.number.football', 
+                              ~'NCAA.football') %>% 
+                    rename_at('IC2021.Institution.provide.on.campus.housing', 
+                              ~'on.campus.housing') %>% 
+                    rename_at('IC2021.Total.dormitory.capacity', 
+                              ~'dorm.capacity') %>% 
+                    rename_at('IC2021.Typical.room.charge.for.academic.year', 
+                              ~'dorm.room.price')
 ```
+
 
 
 ```{r, eval=T}
