@@ -21,13 +21,16 @@ merged.cases <- read.csv("data/merged_cases.csv")
 mask.mandates <- read.csv("data/U.S._State_and_Territorial_Public_Mask_Mandates_From_April_8__2020_through_August_15__2021_by_State_by_Day.csv")
 factor.variables <- c("Face_Masks_Required_in_Public", "State_Tribe_Territory", "order_code")
 mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.factor)
+mask.mandates$date <- as.Date(mask.mandates$date, format="%m/%d/%Y")
 ```
 
 ```{r, eval=T}
 mandates.by.state <- data.frame(state=unique(mask.mandates$State_Tribe_Territory))
 mandates.by.state$number_of_days_mandated <- 0
 for (i in 1:length(unique(mandates.by.state$state))) {
-  dummy <- mask.mandates$Face_Masks_Required_in_Public[mask.mandates$State_Tribe_Territory == mandates.by.state$state[i]]
+  dummy <- mask.mandates$Face_Masks_Required_in_Public[mask.mandates$State_Tribe_Territory == mandates.by.state$state[i]
+                                                       & mask.mandates$date >= as.Date("2020/7/1")
+                                                       & mask.mandates$date <= as.Date("2021/5/26")]
   dummy[is.na(dummy)] <- "No"
   mandates.by.state$number_of_days_mandated[mandates.by.state$state == mandates.by.state$state[i]] = sum(dummy == "Yes")
 }
