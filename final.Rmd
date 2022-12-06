@@ -191,7 +191,7 @@ full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
 factor.variables <- c("religious", "FIPS.state.code", "private", 
                       "occupational.degree", "academic.degree", 
                       "hs.equivalent.degree", "NCAA.football", 
-                      "on.campus.housing", "catholic")
+                      "on.campus.housing", "catholic", "state")
 full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
 
 # Write to csv
@@ -200,9 +200,9 @@ write.csv(full.cases, file="data/full_cases.csv")
 
 # Description of variables
 
-Add description of all the variables considered in our analyses 
+Add description of all the variables considered in our analyses. COULD PROBABLY SAVE THIS FOR THE END
 
-# Group Testing
+# Group Testing (Daniel)
 
 Explain motivation for group testing
 
@@ -222,6 +222,11 @@ epsilon <- 1
 par(mfrow=c(1,2))
 hist(full.cases$total.cases, main="total.cases, untransformed")
 hist(log(full.cases$total.cases + epsilon), main="total.cases, log-transformed")
+```
+
+```{r, eval=T}
+qqnorm(log(full.cases$total.cases + epsilon))
+qqline(log(full.cases$total.cases + epsilon))
 ```
 
 ## Student-$t$ Tests 
@@ -267,7 +272,41 @@ Interpret significance
 
 # Linear Regression Models
 
-# Reviewing the Assumptions of Linear Regression
+```{r, eval=T}
+# Not included in the below model: NCAA.football, religious.affiliation, 
+# mask.mandated days, as well as those subtracted from the formula of
+# the commented out lm1 below
+lm1 <- lm(log(total.cases + epsilon) ~ religious + catholic + 
+            tuition + total.headcount + 
+            undergrad.headcount + percent.american.native + percent.asian + 
+            percent.black + percent.hispanic.latino + percent.pacific.islander +
+            percent.white + percent.two.more.races + percent.NA.race + 
+            percent.nonres.alien + percent.women + grad.rate + percent.fin.aid + 
+            percent.disability + on.campus.housing + state + 
+            private + percent.student.loan + 
+            occupational.degree + hs.equivalent.degree, 
+          data=full.cases)
+
+# No idea why the below does not work
+# lm1 <- lm(log(total.cases + epsilon) ~ . - (avg.grant.money + dorm.capacity + dorm.room.price + FIPS.state.code + city + college + ipeds_id + institution.name + cases + cases_2021 + academic.degree), data=full.cases)
+# bad <- c("avg.grant.money", "dorm.capacity", "dorm.room.price", )
+summary(lm1)
+```
+
+## Checking the Assumptions of Linear Regression
+
+As discussed above in the group testing section, we believe that it is reasonable to assume that the observations in this data set are independent of one another, and that the log-transformed response variable `total.cases` is distributed normally. Thus, what remains to shown is that the following three assumptions are reasonable: 
+
+1) **Linearity.**
+
+
+2) **Constant Variance.** 
+
+```{r, eval=T}
+plot(lm1$residuals ~ lm1$fitted.values)
+abline(h=0, col="gray", lty=2)
+```
+
 
 # Sequential Variable Selection Models 
 
