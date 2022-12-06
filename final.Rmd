@@ -1,0 +1,217 @@
+---
+title: "Characterizing the relationship between the religious affiliation and incidences of Covid-19 at U.S. universities."
+author: "Daniel de Castro and Laura Appleby"
+date: "December 13, 2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, eval=T, include=F}
+library(dplyr)
+```
+
+## Introduction
+
+Paragraph expressing our motivations for pursuing this project, a brief analysis plan, and our hypotheses. 
+
+## Description of data and source
+
+Our data for this project comes from three sources: 
+
+1. [NYTimes Covid-19 Data](https://github.com/nytimes/covid-19-data/tree/master/colleges). This is publicly available on GitHub and was the source for some of the NYTimes maps and data visuals during the 2020-2021 era of the pandemic. It includes cases from 2020 - May 2021, and we have specifically selected cases at Universities. This dataset has 1948 entries and includes 2020 cases, 2021 cases, University IPEDS ID, University Name, State, etc. 
+
+2. [IPEDS Data Center](https://nces.ed.gov/ipeds/use-the-data). This is publicly available data on colleges across the globe. It has many possible variables including demographics, admission rates, University affiliation, etc. The IPEDS data center allowed us to select certain Universities and variables. The smallest subset of Universities that included all from the NYTimes database (by IPEDS ID) was 6125 rows, with all US Universities. 
+
+3. [Centers for Disease Control](https://data.cdc.gov/Policy-Surveillance/U-S-State-and-Territorial-Public-Mask-Mandates-Fro/tzyy-aayg). This publicly available data set tracks mask mandates in each state from April 8, 2020, to August 15, 2021. 
+
+The data is 1,855 rows after removing Universities without stats or without matching IPEDS ids. It has 40 columns, including IPEDS id, university name, cases, and predictor variables based on college attributes. 
+
+## Data Cleaning Procedures
+
+For this exploratory data analysis, the first step is to read our data from CSV files into R data frames. The `colleges` data frame stores the NYT data on Covid cases at universities, while the `ipeds` data frame stores the data will most of our predictor variables (university characteristics) taken from IPEDS. We then rename most of the columns in `ipeds` to make them shorter and easier to work with. 
+
+```{r, eval=T, echo = FALSE}
+# Read colleges from csv
+colleges <- read.csv("data/colleges.csv")[,-c(1,9)]
+
+# Read ipeds from csv, drop unnecessary columns
+ipeds <- read.csv("data/ipeds.csv")
+ipeds <- ipeds[-c(3, 8, 22)]
+
+# Rename columns of ipeds 
+ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation', 
+                             ~'control') %>% 
+                    rename_at('HD2021.FIPS.state.code', ~'FIPS.state.code') %>% 
+                    rename_at('unitid', ~'ipeds_id') %>% 
+                    rename_at('IC2021.Religious.affiliation', 
+                              ~'religious.affiliation') %>%
+                    rename_at('DRVIC2021.Tuition.and.fees..2020.21', 
+                              ~'tuition') %>% 
+                    rename_at('DRVEF122021.Total.12.month.unduplicated.headcount', 
+                              ~'total.headcount') %>% 
+                    rename_at('DRVEF122021.Undergraduate.12.month.unduplicated.headcount',
+                    ~'undergrad.headcount') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.American.Indian.or.Alaska.Native', 
+                              ~'percent.american.native') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Asian', 
+                              ~'percent.asian') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Black.or.African.American', 
+                              ~'percent.black') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Hispanic.Latino', ~'percent.hispanic.latino') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Native.Hawaiian.or.Other.Pacific.Islander', 
+                              ~'percent.pacific.islander') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.White', 
+                              ~'percent.white') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.two.or.more.races', 
+                              ~'percent.two.more.races') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.race.ethnicity.unknown', ~'percent.NA.race') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.Nonresident.Alien',
+                              ~'percent.nonres.alien') %>% 
+                    rename_at('DRVEF122021.Percent.of.12.month.unduplicated.headcount.that.are.women', ~'percent.women') %>% 
+                    rename_at('SFA2021.Average.amount.of.grant.and.scholarship.aid.awarded..2020.21', ~'avg.grant.money') %>% 
+                    rename_at('DRVGR2021.Graduation.rate..total.cohort', ~'grad.rate') %>% 
+                    rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.any.financial.aid', 
+                              ~'percent.fin.aid') %>% 
+                    rename_at('SFA2021.Percent.of.full.time.first.time.undergraduates.awarded.student.loans', 
+                              ~'percent.student.loan') %>% 
+                    rename_at('IC2021.Occupational', ~'occupational.degree') %>% 
+                    rename_at('IC2021.Academic', ~'academic.degree') %>% 
+                    rename_at('IC2021.Adult.basic.remedial.or.high.school.equivalent', 
+                              ~'hs.equivalent.degree') %>% 
+                    rename_at('IC2021.Percent.of.undergraduates..who.are.formally.registered.as.students.with.disabilities..when.percentage.is.more.than.3.percent', 
+                              ~'percent.disability') %>% 
+                    rename_at('IC2021.NCAA.NAIA.conference.number.football', 
+                              ~'NCAA.football') %>% 
+                    rename_at('IC2021.Institution.provide.on.campus.housing', 
+                              ~'on.campus.housing') %>% 
+                    rename_at('IC2021.Total.dormitory.capacity', 
+                              ~'dorm.capacity') %>% 
+                    rename_at('IC2021.Typical.room.charge.for.academic.year', 
+                              ~'dorm.room.price')
+```
+
+Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious`, `catholic`, and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop the `control` column from the data frame, since it now contains redundant information.
+
+```{r, eval=T, echo = FALSE}
+# Merge data frames, and remove duplicated "state" column 
+md <- merge(ipeds, colleges, by="ipeds_id")[,-32]
+
+# Remove institutions with no ipeds data (a lot of NAs)
+md <- md[!(md$control == ""),]
+
+# Create column 'religious' 
+md$religious <- "Yes"
+md[md$religious.affiliation == "Not applicable", ]$religious <- "No"
+
+# Create column 'catholic'
+md$catholic <- "No"
+md[md$religious.affiliation == "Roman Catholic",]$catholic <- "Yes"
+
+# Create column 'private' 
+md$private <- "No"
+md$private[md$control == "Private not-for-profit (no religious affiliation)" | 
+             md$control == "Private not-for-profit (religious affiliation)"] <- 
+  "Yes"
+
+# Drop column 'control'
+md <- md[,-4]
+
+# Write to csv 
+write.csv(md,'merged_cases.csv')
+```
+
+Finally, we look to add a column to the data frame that addresses the extent to which mask mandates were present in the state in which each institution is located. Below, we read out the mask mandates data from the CDC into a data frame from the CSV file, treat the appropriate columns as factors, and convert `date` into R's `Date` type.  
+
+```{r, eval=T, echo = FALSE}
+# Read mask.mandates from CSV file
+mask.mandates <- read.csv("data/U.S._State_and_Territorial_Public_Mask_Mandates_From_April_8__2020_through_August_15__2021_by_State_by_Day.csv")
+
+# Convert appropriate columns to factors
+factor.variables <- c("Face_Masks_Required_in_Public", "State_Tribe_Territory", "order_code")
+mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.factor)
+
+# Convert column 'date' to type Date from string 
+mask.mandates$date <- as.Date(mask.mandates$date, format="%m/%d/%Y")
+```
+
+We then create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and finally create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
+
+```{r, eval=T, echo = FALSE}
+# Create new data frame to merge with md
+mandates.by.state <- data.frame(state=unique(mask.mandates$State_Tribe_Territory))
+
+# Create and fill column 'mask.mandated.days'
+mandates.by.state$mask.mandated.days <- 0
+for (i in 1:length(unique(mandates.by.state$state))) {
+  dummy <- mask.mandates$Face_Masks_Required_in_Public[mask.mandates$State_Tribe_Territory == mandates.by.state$state[i]
+                                                       & mask.mandates$date >= as.Date("2020/7/1")
+                                                       & mask.mandates$date <= as.Date("2021/5/26")]
+  dummy[is.na(dummy)] <- "No"
+  mandates.by.state$mask.mandated.days[mandates.by.state$state == mandates.by.state$state[i]] = sum(dummy == "Yes")
+}
+
+# Add state names to mandates.by.state
+mandates.by.state$full_state_name <- c("Alaska", "Alabama", "Arkansas", 
+                                       "American Samoa", "Arizona", 
+                                       "California", "Colorado", 
+                                       "District of Columbia", "Connecticut", 
+                                       "Florida", "Delaware", "Georgia", "Guam", 
+                                       "Iowa", "Hawaii", "Idaho", "Illinois", 
+                                       "Indiana", "Kansas", "Kentucky", 
+                                       "Louisiana", "Massachusetts", 
+                                       "Minnesota", "Maryland", "Maine", 
+                                       "Michigan", "Missouri", 
+                                       "Northern Mariana Islands", 
+                                       "Mississippi", "Montana", 
+                                       "North Carolina", "North Dakota", 
+                                       "Nebraska", "New Hampshire", "Nevada", 
+                                       "New Jersey", "New Mexico", "Ohio", 
+                                       "New York", "Oklahoma", "Oregon", 
+                                       "South Carolina", "Rhode Island", 
+                                       "Pennsylvania", "Puerto Rico", 
+                                       "South Dakota", "Tennessee", "Texas", 
+                                       "Utah", "Virginia", "Virgin Islands", 
+                                       "Vermont", "Washington", "Wisconsin", 
+                                       "West Virginia", "Wyoming")
+
+# Drop state abbreviation column and reorder remaining two columns 
+mandates.by.state <- mandates.by.state[,c(3,2)]
+
+# Merge md and mandates.by.state data frames on name of state
+full.cases <- merge(md, mandates.by.state, by.x="FIPS.state.code", 
+      by.y="full_state_name")
+
+# Create total.cases column
+full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
+
+# Convert necessary columns to factors 
+factor.variables <- c("religious", "FIPS.state.code", "private", 
+                      "occupational.degree", "academic.degree", 
+                      "hs.equivalent.degree", "NCAA.football", 
+                      "on.campus.housing", "catholic")
+full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
+
+# Write to csv
+write.csv(full.cases, file="data/full_cases.csv")
+```
+
+## Group Testing
+
+## Linear Regression Models
+
+## Reviewing the Assumptions of Linear Regression
+
+## Sequential Variable Selection Models 
+
+## Penalized Regression Models (Ridge and LASSO)
+
+## Non-Parametric Models (Decision Trees, Random Forests)
+
+## Mixed-Effect Models
+
+## Conclusions
+
+
