@@ -198,7 +198,44 @@ full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor
 write.csv(full.cases, file="data/full_cases.csv")
 ```
 
+## Description of variables
+
+Add description of all the variables considered in our analyses 
+
 ## Group Testing
+
+Explain motivation for group testing
+
+### Student-$t$ Tests 
+
+State hypotheses, add note confirming the use of $\alpha = 0.05$ as our confidence level throughout the paper. 
+
+```{r, eval=T}
+t.test(total.cases ~ religious, data=full.cases)
+```
+
+Interpret statistical significance
+
+State motivations and hypotheses for the next test 
+
+```{r, eval=T}
+t.test(total.cases ~ catholic, data=full.cases)
+```
+
+Interpret statistical significance 
+
+### Checking the assumptions for $t$-based methods
+
+
+### ANOVA
+
+```{r, eval=T}
+for.rel.affil <- full.cases[,c("total.cases", "religious.affiliation")]
+for.rel.affil <- for.rel.affil[complete.cases(for.rel.affil),]
+summary(aov(total.cases ~ religious.affiliation, data=for.rel.affil))
+```
+
+Shows that just breaking observations into religious vs. not religious (or catholic vs. not catholic) is much more informative than considering the specific religious affiliation of each school. 
 
 ## Linear Regression Models
 
