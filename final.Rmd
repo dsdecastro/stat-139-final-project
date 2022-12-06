@@ -11,6 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, eval=T, include=F}
 library(dplyr)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
 ```
 
 # Introduction
@@ -299,6 +302,12 @@ As discussed above in the group testing section, we believe that it is reasonabl
 
 1) **Linearity.**
 
+```{r, eval=T}
+# par(mfrow=c(2,2))
+plot(log(total.cases + epsilon) ~ tuition, data=full.cases)
+plot(log(total.cases + epsilon) ~ total.headcount, data=full.cases)
+plot(log(total.cases + epsilon) ~ undergrad.headcount, data=full.cases)
+```
 
 2) **Constant Variance.** 
 
@@ -313,6 +322,30 @@ abline(h=0, col="gray", lty=2)
 # Penalized Regression Models (Ridge and LASSO)
 
 # Non-Parametric Models (Decision Trees, Random Forests)
+
+## Decision Tree 
+
+```{r, eval=T}
+tree1 <- rpart(log(total.cases + epsilon) ~ religious + catholic + 
+            tuition + total.headcount + 
+            undergrad.headcount + percent.american.native + percent.asian + 
+            percent.black + percent.hispanic.latino + percent.pacific.islander +
+            percent.white + percent.two.more.races + percent.NA.race + 
+            percent.nonres.alien + percent.women + grad.rate + percent.fin.aid + 
+            percent.disability + on.campus.housing + state + 
+            private + percent.student.loan + 
+            occupational.degree + hs.equivalent.degree, 
+          data=full.cases)
+tree1$variable.importance
+rpart.plot(tree1)
+```
+
+## Bagged Decision Tree
+
+```{r, eval=T}
+
+```
+
 
 # Mixed-Effect Models
 
