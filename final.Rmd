@@ -13,11 +13,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 ```
 
-## Introduction
+# Introduction
 
 Paragraph expressing our motivations for pursuing this project, a brief analysis plan, and our hypotheses. 
 
-## Description of data and source
+# Description of data and source
 
 Our data for this project comes from three sources: 
 
@@ -29,7 +29,7 @@ Our data for this project comes from three sources:
 
 The data is 1,855 rows after removing Universities without stats or without matching IPEDS ids. It has 40 columns, including IPEDS id, university name, cases, and predictor variables based on college attributes. 
 
-## Data Cleaning Procedures
+# Data Cleaning Procedures
 
 For this exploratory data analysis, the first step is to read our data from CSV files into R data frames. The `colleges` data frame stores the NYT data on Covid cases at universities, while the `ipeds` data frame stores the data will most of our predictor variables (university characteristics) taken from IPEDS. We then rename most of the columns in `ipeds` to make them shorter and easier to work with. 
 
@@ -198,20 +198,38 @@ full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor
 write.csv(full.cases, file="data/full_cases.csv")
 ```
 
-## Description of variables
+# Description of variables
 
 Add description of all the variables considered in our analyses 
 
-## Group Testing
+# Group Testing
 
 Explain motivation for group testing
 
-### Student-$t$ Tests 
+## Checking the assumptions for $t$-based methods
+
+For unpooled $t$-based test for a difference in sample means, there are three assumptions:
+
+1) **Observations are independent.** Explain why reasonable. 
+
+2) **Groups are independent of one another.** Explain why reasonable. 
+
+3) **Observations are normally distributed.** 
+
+```{r, eval=T}
+epsilon <- 1
+
+par(mfrow=c(1,2))
+hist(full.cases$total.cases, main="total.cases, untransformed")
+hist(log(full.cases$total.cases + epsilon), main="total.cases, log-transformed")
+```
+
+## Student-$t$ Tests 
 
 State hypotheses, add note confirming the use of $\alpha = 0.05$ as our confidence level throughout the paper. 
 
 ```{r, eval=T}
-t.test(total.cases ~ religious, data=full.cases)
+t.test(log(total.cases + epsilon) ~ religious, data=full.cases)
 ```
 
 Interpret statistical significance
@@ -219,15 +237,12 @@ Interpret statistical significance
 State motivations and hypotheses for the next test 
 
 ```{r, eval=T}
-t.test(total.cases ~ catholic, data=full.cases)
+t.test(log(total.cases + epsilon) ~ catholic, data=full.cases)
 ```
 
 Interpret statistical significance 
 
-### Checking the assumptions for $t$-based methods
-
-
-### ANOVA
+## ANOVA
 
 ```{r, eval=T}
 for.rel.affil <- full.cases[,c("total.cases", "religious.affiliation")]
@@ -237,18 +252,31 @@ summary(aov(total.cases ~ religious.affiliation, data=for.rel.affil))
 
 Shows that just breaking observations into religious vs. not religious (or catholic vs. not catholic) is much more informative than considering the specific religious affiliation of each school. 
 
-## Linear Regression Models
+## Non-Parametric Testing — Wilcox Rank Sum Test
 
-## Reviewing the Assumptions of Linear Regression
+Motivations for non-parametric testing, and hypotheses 
 
-## Sequential Variable Selection Models 
+```{r, eval=T}
+wilcox.test(x = full.cases$total.cases[full.cases$religious == "Yes"], 
+            y = full.cases$total.cases[full.cases$religious == "No"], 
+            alternative='two.sided', exact = FALSE, correct = FALSE, 
+            conf.int = TRUE)
+```
 
-## Penalized Regression Models (Ridge and LASSO)
+Interpret significance 
 
-## Non-Parametric Models (Decision Trees, Random Forests)
+# Linear Regression Models
 
-## Mixed-Effect Models
+# Reviewing the Assumptions of Linear Regression
 
-## Conclusions
+# Sequential Variable Selection Models 
+
+# Penalized Regression Models (Ridge and LASSO)
+
+# Non-Parametric Models (Decision Trees, Random Forests)
+
+# Mixed-Effect Models
+
+# Conclusions
 
 
