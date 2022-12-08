@@ -317,12 +317,11 @@ lines(yhat~x,col="magenta",lwd=4)
 
 df = full.cases
 
-# No idea why the below does not work
-# lm1 <- lm(log(total.cases + epsilon) ~ . - (avg.grant.money + dorm.capacity + dorm.room.price + FIPS.state.code + city + college + ipeds_id + institution.name + cases + cases_2021 + academic.degree), data=full.cases)
-# bad <- c("avg.grant.money", "dorm.capacity", "dorm.room.price", )
+# avg.grant.money, dorm.capacity, dorm.room.price, academic.degree
 ```
 
 Can see across the board that religious status of school is a statistically significant predictor in the above models. Could also analyze specifics?
+
 
 ## Checking the Assumptions of Linear Regression
 
@@ -335,6 +334,8 @@ As discussed above in the group testing section, we believe that it is reasonabl
 plot(log(total.cases + epsilon) ~ tuition, data=full.cases)
 plot(log(total.cases + epsilon) ~ total.headcount, data=full.cases)
 plot(log(total.cases + epsilon) ~ undergrad.headcount, data=full.cases)
+
+plot(log(total.cases + epsilon) ~ log(undergrad.headcount), data=full.cases)
 ```
 
 What about these individual cases? 
