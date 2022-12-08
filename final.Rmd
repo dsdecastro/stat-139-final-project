@@ -147,7 +147,7 @@ mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.
 mask.mandates$date <- as.Date(mask.mandates$date, format="%m/%d/%Y")
 ```
 
-We then create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and finally create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
+We then create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
 
 ```{r, eval=T, echo = FALSE}
 # Create new data frame to merge with md
@@ -203,9 +203,16 @@ factor.variables <- c("religious", "FIPS.state.code", "private",
                       "hs.equivalent.degree", "NCAA.football", 
                       "on.campus.housing", "catholic", "state")
 full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
+```
 
-# Write to csv
-write.csv(full.cases, file="data/full_cases.csv")
+Finally, we read 2020 presidential election voter gap data into a data frame, and merge this data frame — with two columns: state and 2020 voter gap — with our data frame of observations on the `state` variable. 
+
+```{r, eval=T}
+elections.data <- read.csv("data/pres_elections.csv")
+voter.gap <- elections.data[,c("state", "gap20repub")]
+voter.gap$state[voter.gap$state == "DC"] <- "Washington, D.C."
+
+full.cases <- merge(full.cases, voter.gap, by="state")
 ```
 
 # Description of variables
