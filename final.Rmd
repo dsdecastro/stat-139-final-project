@@ -358,7 +358,7 @@ abline(h=0, col="gray", lty=2)
 # Sequential Variable Selection Models 
 
 ```{r}
-df = full.cases[,c("percent.cases","state", "number_of_days_mandated", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
+df = full.cases[,c("percent.cases","state", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
 
 df = na.omit(df)
 
@@ -444,6 +444,8 @@ best.index.bag
 
 
 # Mixed-Effect Models
+
+# Identifying the Best Model 
 
 # Conclusions
 
