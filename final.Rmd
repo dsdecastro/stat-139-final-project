@@ -126,8 +126,11 @@ md$private[md$control == "Private not-for-profit (no religious affiliation)" |
              md$control == "Private not-for-profit (religious affiliation)"] <- 
   "Yes"
 
-# Drop column 'control', 'academic.degree', 'dorm.capacity', 'dorm.room.price'
-md <- md[,-c(4,24,29,30)]
+# Drop column 'control', 'academic.degree', 'dorm.room.price'
+md <- md[,-c(4,24,30)]
+
+# Set 'dorm.capacity' to 0 if no on.campus.housing
+md$dorm.capacity[md$on.campus.housing == "No"] <- 0
 
 # Write to csv 
 write.csv(md,'merged_cases.csv')
@@ -213,6 +216,7 @@ voter.gap <- elections.data[,c("state", "gap20repub")]
 voter.gap$state[voter.gap$state == "DC"] <- "Washington, D.C."
 
 full.cases <- merge(full.cases, voter.gap, by="state")
+write.csv(full.cases, "full_cases.csv")
 ```
 
 # Description of variables
@@ -283,6 +287,94 @@ Interpret significance
 
 Of course, group tests are limited in that they do not take into account potential confounding variables that might reveal the significance of an institution's having a religious affiliation. To take into account the effects of these potential confounding variables — which we have already identified at length, as evidenced by the extensive list of predictors we compiled before beginning our analyses — we will fit linear models. We will then use these linear models to perform statistical inference on the coefficient of the `religious` predictor, determining whether there is a statistically significant relationship between an institution's religious affiliation and the number of cases that it recorded.
 
+## Checking the Assumptions of Linear Regression Models
+
+Before we can fit more complicated models, we must first check the assumptions of linear regression. We begin by checking the assumption of linearity, plotting `cases` versus all of the quantitative predictors that we would like to include in our analyses: 
+
+```{r, eval=T}
+# par(mfrow=c(8,2))
+plot(log(total.cases + epsilon) ~ tuition, data=full.cases)
+plot(log(total.cases + epsilon) ~ log(total.headcount), data=full.cases)
+plot(log(total.cases + epsilon) ~ log(percent.american.native), data=full.cases)
+plot(log(total.cases + epsilon) ~ log(percent.asian), data=full.cases)
+plot(log(total.cases + epsilon) ~ log(percent.black), data=full.cases)
+plot(log(total.cases + epsilon) ~ log(percent.hispanic.latino), data=full.cases)
+plot(log(total.cases + epsilon) ~ log(percent.pacific.islander), data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.white, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.two.more.races, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.women, data=full.cases)
+plot(log(total.cases + epsilon) ~ grad.rate, data=full.cases)
+plot(log(total.cases + epsilon) ~ log(100-percent.fin.aid+epsilon), data=full.cases)
+plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
+plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
+```
+
+We identify that LIST would benefit from being log-transformed; the following plots show that the distribution of these predictors are much better after being log-transformed. 
+
+Fitting basic models for `cases` and `total.cases` and checking heteroskedasticity assumption.
+
+```{r, eval=T}
+lm6 <- lm(log(cases + epsilon) ~ religious + tuition + total.headcount + 
+            percent.american.native + percent.asian + 
+            percent.black + percent.hispanic.latino + percent.pacific.islander +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + percent.fin.aid + 
+            on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree, data=full.cases)
+
+plot(lm6$residuals ~ lm6$fitted.values)
+abline(h=0, col="gray")
+```
+
+```{r, eval=T}
+lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + total.headcount + 
+            percent.american.native + percent.asian + 
+            percent.black + percent.hispanic.latino + percent.pacific.islander +
+            percent.white + percent.two.more.races + percent.NA.race + 
+            percent.nonres.alien + percent.women + grad.rate + percent.fin.aid + 
+            percent.disability + on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree, data=full.cases)
+
+plot(lm7$residuals ~ lm7$fitted.values)
+abline(h=0, col="gray")
+```
+
+Can see across the board that religious status of school is a statistically significant predictor in the above models. Could also analyze specifics?
+
+
+## Checking the Assumptions of Linear Regression
+
+As discussed above in the group testing section, we believe that it is reasonable to assume that the observations in this data set are independent of one another, and that the log-transformed response variable `total.cases` is distributed normally. Thus, what remains to shown is that the following three assumptions are reasonable: 
+
+1) **Linearity.**
+
+```{r, eval=T}
+
+
+plot(log(total.cases + epsilon) ~ log(undergrad.headcount), data=full.cases)
+```
+
+What about these individual cases? 
+
+```{r, eval=T}
+plot(lm1$residuals ~ lm1$fitted.values)
+abline(h=0, col="gray", lty=2)
+```
+
+Based on above plot, no other clear pattern revealed — nothing obviously flawed with this assumption, so we continue forward. 
+
+2) **Constant Variance.** 
+
+```{r, eval=T}
+plot(lm1$residuals ~ lm1$fitted.values)
+abline(h=0, col="gray", lty=2)
+```
+
+## Laura's work from before
+
 ```{r, eval=T}
 # Not included in the below model: NCAA.football, religious.affiliation, 
 # mask.mandated days, as well as those subtracted from the formula of
@@ -319,40 +411,6 @@ lines(yhat~x,col="magenta",lwd=4)
 df = full.cases
 
 # avg.grant.money, dorm.capacity, dorm.room.price, academic.degree
-```
-
-Can see across the board that religious status of school is a statistically significant predictor in the above models. Could also analyze specifics?
-
-
-## Checking the Assumptions of Linear Regression
-
-As discussed above in the group testing section, we believe that it is reasonable to assume that the observations in this data set are independent of one another, and that the log-transformed response variable `total.cases` is distributed normally. Thus, what remains to shown is that the following three assumptions are reasonable: 
-
-1) **Linearity.**
-
-```{r, eval=T}
-# par(mfrow=c(2,2))
-plot(log(total.cases + epsilon) ~ tuition, data=full.cases)
-plot(log(total.cases + epsilon) ~ total.headcount, data=full.cases)
-plot(log(total.cases + epsilon) ~ undergrad.headcount, data=full.cases)
-
-plot(log(total.cases + epsilon) ~ log(undergrad.headcount), data=full.cases)
-```
-
-What about these individual cases? 
-
-```{r, eval=T}
-plot(lm1$residuals ~ lm1$fitted.values)
-abline(h=0, col="gray", lty=2)
-```
-
-Based on above plot, no other clear pattern revealed — nothing obviously flawed with this assumption, so we continue forward. 
-
-2) **Constant Variance.** 
-
-```{r, eval=T}
-plot(lm1$residuals ~ lm1$fitted.values)
-abline(h=0, col="gray", lty=2)
 ```
 
 
