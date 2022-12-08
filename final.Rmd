@@ -14,6 +14,7 @@ library(dplyr)
 library(rpart)
 library(rpart.plot)
 library(randomForest)
+library(sandwich)
 ```
 
 ```{r, eval=T, include=F}
@@ -292,86 +293,91 @@ Of course, group tests are limited in that they do not take into account potenti
 Before we can fit more complicated models, we must first check the assumptions of linear regression. We begin by checking the assumption of linearity, plotting `cases` versus all of the quantitative predictors that we would like to include in our analyses: 
 
 ```{r, eval=T}
-# par(mfrow=c(8,2))
-plot(log(total.cases + epsilon) ~ tuition, data=full.cases)
+par(mfrow=c(3,2), mar=1.5 * c(1,1,1,1), cex=0.5)
+plot(log(total.cases + epsilon) ~ tuition, data=full.cases,
+     main="tuition")
+plot(log(total.cases + epsilon) ~ total.headcount, data=full.cases,
+     main="total.headcount")
+plot(log(total.cases + epsilon) ~ percent.american.native, data=full.cases,
+     main="percent.american.native")
+plot(log(total.cases + epsilon) ~ percent.asian, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.black, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.hispanic.latino, data=full.cases)
+par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
+plot(log(total.cases + epsilon) ~ percent.pacific.islander, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.white, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.two.more.races, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.women, data=full.cases)
+plot(log(total.cases + epsilon) ~ grad.rate, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.fin.aid, data=full.cases)
+par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
+plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
+plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
+```
+
+We identify that `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, and `percent.pacific.islander` would benefit from being log-transformed; given the left-skenwess of its distribution, we also determined that `percent.fin.aid` would be best transformed using the following transformation `log(100 - percent.fin.aid + 1)`. The following plots show that the distribution of these predictors are much better after being transformed. 
+
+```{r, eval=T}
+par(mfrow=c(4,2), mar=c(1,1,1,1))
 plot(log(total.cases + epsilon) ~ log(total.headcount), data=full.cases)
 plot(log(total.cases + epsilon) ~ log(percent.american.native), data=full.cases)
 plot(log(total.cases + epsilon) ~ log(percent.asian), data=full.cases)
 plot(log(total.cases + epsilon) ~ log(percent.black), data=full.cases)
 plot(log(total.cases + epsilon) ~ log(percent.hispanic.latino), data=full.cases)
 plot(log(total.cases + epsilon) ~ log(percent.pacific.islander), data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.white, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.two.more.races, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.women, data=full.cases)
-plot(log(total.cases + epsilon) ~ grad.rate, data=full.cases)
-plot(log(total.cases + epsilon) ~ log(100-percent.fin.aid+epsilon), data=full.cases)
-plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
-plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
+plot(log(total.cases + epsilon) ~ log(100-percent.fin.aid+1), data=full.cases)
 ```
 
-We identify that LIST would benefit from being log-transformed; the following plots show that the distribution of these predictors are much better after being log-transformed. 
+After these transformations, the linearity assumptions seems much more reasonable for each of the quantitative predictors. 
 
-Fitting basic models for `cases` and `total.cases` and checking heteroskedasticity assumption.
+In order to check the assumption of homoskedasticity, we fit basic regression models for `cases` and `total.cases` using all of the predictors in our predictor set.
 
 ```{r, eval=T}
-lm6 <- lm(log(cases + epsilon) ~ religious + tuition + total.headcount + 
-            percent.american.native + percent.asian + 
-            percent.black + percent.hispanic.latino + percent.pacific.islander +
+lm6 <- lm(log(cases + epsilon) ~ religious + tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
             percent.white + percent.two.more.races + 
-            percent.women + grad.rate + percent.fin.aid + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
             on.campus.housing + gap20repub + 
             private + percent.student.loan + mask.mandated.days +
             occupational.degree + hs.equivalent.degree, data=full.cases)
 
-plot(lm6$residuals ~ lm6$fitted.values)
+plot(lm6$residuals ~ lm6$fitted.values, main="cases")
 abline(h=0, col="gray")
 ```
 
+As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. Given that the vast majority of residuals are clustered around a region with consistent spread, we believe that the assumption of homoskedasticity will be reasonable enough to accept in this case. As a check, we will compare the standard errors generated by heteroskedasticity-consistent method with those generated by the standard OLS approach: 
+
 ```{r, eval=T}
-lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + total.headcount + 
-            percent.american.native + percent.asian + 
-            percent.black + percent.hispanic.latino + percent.pacific.islander +
-            percent.white + percent.two.more.races + percent.NA.race + 
-            percent.nonres.alien + percent.women + grad.rate + percent.fin.aid + 
-            percent.disability + on.campus.housing + gap20repub + 
+vcov.robust = vcovHC(lm6, type="HC")
+data.frame(ols=round(summary(lm6)$coef[,'Std. Error'],4), 
+           robust=round(sqrt(diag(vcov.robust)),4), 
+           diff=round(abs(sqrt(diag(vcov.robust)) - 
+                            summary(lm6)$coef[,'Std. Error']),4))
+```
+
+As the table above shows, the standard errors are the most part consistent between the two models. ADDRESS
+
+```{r, eval=T}
+lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
+            on.campus.housing + gap20repub + 
             private + percent.student.loan + mask.mandated.days +
             occupational.degree + hs.equivalent.degree, data=full.cases)
 
-plot(lm7$residuals ~ lm7$fitted.values)
+plot(lm7$residuals ~ lm7$fitted.values, main="total.cases")
 abline(h=0, col="gray")
 ```
 
-Can see across the board that religious status of school is a statistically significant predictor in the above models. Could also analyze specifics?
-
-
-## Checking the Assumptions of Linear Regression
-
-As discussed above in the group testing section, we believe that it is reasonable to assume that the observations in this data set are independent of one another, and that the log-transformed response variable `total.cases` is distributed normally. Thus, what remains to shown is that the following three assumptions are reasonable: 
-
-1) **Linearity.**
-
-```{r, eval=T}
-
-
-plot(log(total.cases + epsilon) ~ log(undergrad.headcount), data=full.cases)
-```
-
-What about these individual cases? 
-
-```{r, eval=T}
-plot(lm1$residuals ~ lm1$fitted.values)
-abline(h=0, col="gray", lty=2)
-```
-
-Based on above plot, no other clear pattern revealed — nothing obviously flawed with this assumption, so we continue forward. 
-
-2) **Constant Variance.** 
-
-```{r, eval=T}
-plot(lm1$residuals ~ lm1$fitted.values)
-abline(h=0, col="gray", lty=2)
-```
+In the above plot for the model for `total.cases`, the spread of the residuals is much more consistent across the entire range of fitted values. Though it is not entirely uniform, it would appear reasonable enough to operate under the assumption of homoskedasticity, especially given that, as was demonstrated in Problem Set 3, $t$-based statistical inference procedures done using linear models are fairly robust to slight violations in the assumption of homoskedasticity. EXPAND UPON IF NECESSARY 
 
 ## Laura's work from before
 
