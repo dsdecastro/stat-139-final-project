@@ -16,7 +16,7 @@ library(rpart.plot)
 library(randomForest)
 ```
 
-```{r, eval=T}
+```{r, eval=T, include=F}
 RMSE <- function(y, yhat) {
   SSE = sum((y-yhat)^2)
   return(sqrt(SSE/length(y)))
@@ -126,8 +126,8 @@ md$private[md$control == "Private not-for-profit (no religious affiliation)" |
              md$control == "Private not-for-profit (religious affiliation)"] <- 
   "Yes"
 
-# Drop column 'control'
-md <- md[,-4]
+# Drop column 'control', 'academic.degree', 'dorm.capacity', 'dorm.room.price'
+md <- md[,-c(4,24,29,30)]
 
 # Write to csv 
 write.csv(md,'merged_cases.csv')
@@ -199,7 +199,7 @@ full.cases$total.cases <- full.cases$cases + full.cases$cases_2021
 
 # Convert necessary columns to factors 
 factor.variables <- c("religious", "FIPS.state.code", "private", 
-                      "occupational.degree", "academic.degree", 
+                      "occupational.degree", 
                       "hs.equivalent.degree", "NCAA.football", 
                       "on.campus.housing", "catholic", "state")
 full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
@@ -212,7 +212,7 @@ write.csv(full.cases, file="data/full_cases.csv")
 
 Add description of all the variables considered in our analyses. COULD PROBABLY SAVE THIS FOR THE END
 
-# Group Testing (Daniel)
+# Group Testing
 
 Explain motivation for group testing
 
@@ -249,14 +249,6 @@ t.test(log(total.cases + epsilon) ~ religious, data=full.cases)
 
 Interpret statistical significance
 
-State motivations and hypotheses for the next test 
-
-```{r, eval=T}
-t.test(log(total.cases + epsilon) ~ catholic, data=full.cases)
-```
-
-Interpret statistical significance 
-
 ## ANOVA
 
 ```{r, eval=T}
@@ -282,6 +274,8 @@ Interpret significance
 
 # Linear Regression Models
 
+Of course, group tests are limited in that they do not take into account potential confounding variables that might reveal the significance of an institution's having a religious affiliation. To take into account the effects of these potential confounding variables — which we have already identified at length, as evidenced by the extensive list of predictors we compiled before beginning our analyses — we will fit linear models. We will then use these linear models to perform statistical inference on the coefficient of the `religious` predictor, determining whether there is a statistically significant relationship between an institution's religious affiliation and the number of cases that it recorded.
+
 ```{r, eval=T}
 # Not included in the below model: NCAA.football, religious.affiliation, 
 # mask.mandated days, as well as those subtracted from the formula of
@@ -302,7 +296,7 @@ summary(lm1 <- lm(log(percent.cases + epsilon) ~ religious + catholic +
 
 summary(lm2 <- lm(log(percent.cases + epsilon) ~ religious + private + tuition, full.cases))
 
-summary(lm3 <-lm(log(percent.cases+epsilon)~(religious + tuition + percent.white+percent.black+number_of_days_mandated)^2,full.cases))
+summary(lm3 <-lm(log(percent.cases+epsilon)~(religious + tuition + percent.white+percent.black+mask.mandated.days)^2,full.cases))
 
 full.cases.tuit = full.cases[complete.cases(full.cases[,c("tuition")]),]
 
@@ -357,15 +351,15 @@ abline(h=0, col="gray", lty=2)
 
 # Sequential Variable Selection Models 
 
-```{r}
+```{r, eval=F}
 df = full.cases[,c("percent.cases","state", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
 
 df = na.omit(df)
 
-summary(model1 <- lm(log(percent.cases+epsilon) ~ number_of_days_mandated + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
+summary(model1 <- lm(log(percent.cases+epsilon) ~ mask.mandated.days + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
 
 
-interactionModel <- lm(log(percent.cases+epsilon) ~ (number_of_days_mandated+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
+interactionModel <- lm(log(percent.cases+epsilon) ~ (mask.mandated.days+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
 
 
 back.step <- step(model1, direction = "backward", k = 2)
@@ -386,66 +380,9 @@ direction = "both")
 
 Honestly not sure how to interpret and forward step model and the both-directions step model take forever to run. 
 
-# Penalized Regression Models (Ridge and LASSO)
-
-# Non-Parametric Models (Decision Trees, Random Forests)
-
-## Decision Tree 
-
-justify control parameters
-
-```{r, eval=T}
-tree1 <- rpart(log(total.cases + epsilon) ~ religious + catholic + 
-            tuition + total.headcount + 
-            undergrad.headcount + percent.american.native + percent.asian + 
-            percent.black + percent.hispanic.latino + percent.pacific.islander +
-            percent.white + percent.two.more.races + percent.NA.race + 
-            percent.nonres.alien + percent.women + grad.rate + percent.fin.aid + 
-            percent.disability + on.campus.housing + state + 
-            private + percent.student.loan + 
-            occupational.degree + hs.equivalent.degree, 
-          data=full.cases, control=list(minsplit=1, cp=0, maxdepth=20))
-tree1$variable.importance
-```
-
-fit a well-pruned decision tree
-
-```{r, eval=T}
-tree2 <- prune(tree1, tree1$cptable[,"CP"][which.min(tree1$cptable[,"xerror"])])
-```
-
-## Bagged Model
-
-```{r, eval=F}
-mtry <- 39
-maxnodes.bag <- c(50,100,200,500)
-ntree <- 200
-train.RMSE <- matrix(nrow=length(maxnodes.bag), ncol=1)
-
-selected.columns <- c("")
-
-for (i in 1:length(maxnodes.bag)) {
-  rf <- randomForest(log(total.cases + epsilon) ~ religious + catholic+tuition + 
-          total.headcount + undergrad.headcount + percent.american.native + 
-          percent.asian + percent.black + percent.hispanic.latino + 
-          percent.pacific.islander + percent.white + percent.two.more.races + 
-          percent.NA.race + percent.nonres.alien + percent.women + 
-          grad.rate + percent.fin.aid + percent.disability + on.campus.housing + 
-          state + private + percent.student.loan + occupational.degree + 
-          hs.equivalent.degree, data=full.cases,
-                     maxnodes=maxnodes.bag, 
-                     ntree=ntree, mtry=length(colnames(full.cases)) - 1)
-  train.RMSE[i,1] <- RMSE(log(full.cases$total.cases + epsilon), rf$predicted)
-}
-
-best.index.bag <- which.min(train.RMSE[,1])
-best.index.bag
-```
-
+# LASSO for Variable Section
 
 # Mixed-Effect Models
-
-# Identifying the Best Model 
 
 # Conclusions
 
