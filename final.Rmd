@@ -286,7 +286,10 @@ Interpret significance
 # Not included in the below model: NCAA.football, religious.affiliation, 
 # mask.mandated days, as well as those subtracted from the formula of
 # the commented out lm1 below
-lm1 <- lm(log(total.cases + epsilon) ~ religious + catholic + 
+
+full.cases$percent.cases <- full.cases$total.cases/full.cases$total.headcount
+
+summary(lm1 <- lm(log(percent.cases + epsilon) ~ religious + catholic + 
             tuition + total.headcount + 
             undergrad.headcount + percent.american.native + percent.asian + 
             percent.black + percent.hispanic.latino + percent.pacific.islander +
@@ -295,13 +298,31 @@ lm1 <- lm(log(total.cases + epsilon) ~ religious + catholic +
             percent.disability + on.campus.housing + state + 
             private + percent.student.loan + 
             occupational.degree + hs.equivalent.degree, 
-          data=full.cases)
+          data=full.cases))
+
+summary(lm2 <- lm(log(percent.cases + epsilon) ~ religious + private + tuition, full.cases))
+
+summary(lm3 <-lm(log(percent.cases+epsilon)~(religious + tuition + percent.white+percent.black+number_of_days_mandated)^2,full.cases))
+
+full.cases.tuit = full.cases[complete.cases(full.cases[,c("tuition")]),]
+
+lm5 = lm(percent.cases ~ poly(tuition, 3, raw=TRUE), data = full.cases.tuit)
+summary(lm5)
+
+x=500:61500
+yhat = predict(lm5,new=data.frame(tuition=x))
+
+plot(percent.cases~tuition,data=full.cases.tuit)
+lines(yhat~x,col="magenta",lwd=4)
+
+df = full.cases
 
 # No idea why the below does not work
 # lm1 <- lm(log(total.cases + epsilon) ~ . - (avg.grant.money + dorm.capacity + dorm.room.price + FIPS.state.code + city + college + ipeds_id + institution.name + cases + cases_2021 + academic.degree), data=full.cases)
 # bad <- c("avg.grant.money", "dorm.capacity", "dorm.room.price", )
-summary(lm1)
 ```
+
+Can see across the board that religious status of school is a statistically significant predictor in the above models. Could also analyze specifics?
 
 ## Checking the Assumptions of Linear Regression
 
@@ -334,6 +355,35 @@ abline(h=0, col="gray", lty=2)
 
 
 # Sequential Variable Selection Models 
+
+```{r}
+df = full.cases[,c("percent.cases","state", "number_of_days_mandated", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
+
+df = na.omit(df)
+
+summary(model1 <- lm(log(percent.cases+epsilon) ~ number_of_days_mandated + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
+
+
+interactionModel <- lm(log(percent.cases+epsilon) ~ (number_of_days_mandated+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
+
+
+back.step <- step(model1, direction = "backward", k = 2)
+
+## including states, excluding days mandated:
+# removed columns are control, undergrad.headcount, percent.pacific.islander,on.campus.housing
+
+## including days mandated, excluding states:
+# removed columns are control, percent.american.native + percent.two.more.races+percent.NA.race,on.campus.housing+percent.disability
+
+forward.step = step(model1, scope = list(upper = formula(interactionModel)), direction = "forward")
+
+model0 = lm(log(percent.cases+1) ~ 1, full.cases)
+
+step = step(model1, scope = list(lower = formula(model0), upper = formula(interactionModel)),
+direction = "both")
+```
+
+Honestly not sure how to interpret and forward step model and the both-directions step model take forever to run. 
 
 # Penalized Regression Models (Ridge and LASSO)
 
