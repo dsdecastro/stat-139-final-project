@@ -39,7 +39,9 @@ Our data for this project comes from three sources:
 
 3. [Centers for Disease Control](https://data.cdc.gov/Policy-Surveillance/U-S-State-and-Territorial-Public-Mask-Mandates-Fro/tzyy-aayg). This publicly available data set tracks mask mandates in each state from April 8, 2020, to August 15, 2021. 
 
-The data is 1,855 rows after removing Universities without stats or without matching IPEDS ids. It has 40 columns, including IPEDS id, university name, cases, and predictor variables based on college attributes. 
+4. The presidential elections data from STAT 139 Problem Set 4. Of this data set, we will be particularly focused on the `gap20repub` predictor, which we will use to help characterize the political climate of the state in which each institution is located.  
+
+The data is $n = 1,855$ rows after removing Universities without stats or without matching IPEDS ids.
 
 # Data Cleaning Procedures
 
@@ -210,7 +212,7 @@ factor.variables <- c("religious", "FIPS.state.code", "private",
 full.cases[,factor.variables] <- lapply(full.cases[,factor.variables], as.factor)
 ```
 
-Finally, we read 2020 presidential election voter gap data into a data frame, and merge this data frame — with two columns: state and 2020 voter gap — with our data frame of observations on the `state` variable. 
+Finally, we read the presidential election data from Problem Set 4 into a data frame, create a two-column data frame with the columns `state` and `gap20repub`, and merge this data frame with our data frame of observations on the `state` variable. 
 
 ```{r, eval=T}
 elections.data <- read.csv("data/pres_elections.csv")
@@ -223,7 +225,55 @@ write.csv(full.cases, "full_cases.csv")
 
 # Description of variables
 
-Add description of all the variables considered in our analyses. COULD PROBABLY SAVE THIS FOR THE END
+After performing the data cleaning procedures outlined above, we are left with the following ADJUST NUMBER! columns:
+
+**ipeds_id** 
+
+**institution.name**
+
+**state**    
+
+**private**
+
+**religious.affiliation**
+
+**religious**
+
+**catholic**
+
+**tuition**
+
+**total.headcount**
+
+**undergrad.headcount** DO WE NEED BOTH? 
+
+**percent.american.native**
+
+**percent.asian**
+
+**percent.black**
+
+**percent.hispanic.latino** 
+
+**percent.pacific.islander**
+
+**percent.white**     
+
+**percent.two.more.races**
+
+**percent.NA.race**
+
+**percent.nonres.alien**
+
+**percent.women** 
+
+[19] "avg.grant.money"          "grad.rate"                "percent.fin.aid"         
+[22] "percent.student.loan"     "occupational.degree"      "hs.equivalent.degree"    
+[25] "NCAA.football"            "percent.disability"       "on.campus.housing"       
+[28] "dorm.capacity"            "city"                     "college"                 
+[31] "cases"                    "cases_2021"               "religious"               
+[34] "catholic"                 "private"                  "mask.mandated.days"      
+[37] "total.cases"              "gap20repub"               "percent.cases" 
 
 # Group Testing
 
@@ -378,7 +428,7 @@ plot(lm7$residuals ~ lm7$fitted.values, main="total.cases")
 abline(h=0, col="gray")
 ```
 
-In the above plot for the model for `total.cases`, the spread of the residuals is much more consistent across the entire range of fitted values. Though it is not entirely uniform, it would appear reasonable enough to operate under the assumption of homoskedasticity, especially given that, as was demonstrated in Problem Set 3, $t$-based statistical inference procedures done using linear models are fairly robust to slight violations in the assumption of homoskedasticity. EXPAND UPON IF NECESSARY 
+In the above plot for the model for `total.cases`, the spread of the residuals is much more consistent across the entire range of fitted values. Though it is not entirely uniform, it would appear reasonable enough to operate under the assumption of homoskedasticity, especially given that, as was demonstrated in Problem Set 3, $t$-based statistical inference procedures done using linear models are fairly robust to slight violations in the assumption of homoskedasticity. 
 
 ## Determining if data from 2020 or 2020 and 2021 should be used 
 
@@ -389,9 +439,12 @@ lm6.both.only <- lm(formula(lm6),
                     data=full.cases[!is.na(full.cases$cases_2021),])
 lm6.twenty.only <- lm(formula(lm6),
                       data=full.cases[is.na(full.cases$cases_2021),])
-modelsummary(list("all"=lm6, "schools with data for both years"=lm6.both.only, 
-                  "schools with only 2020 data"=lm6.twenty.only),
-             statistic="{p.value}, [{conf.low},{conf.high}]")
+modelsummary(list("all schools"=lm6, 
+                  "schools with data\nfor both years"=lm6.both.only, 
+                  "schools with only\n2020 data"=lm6.twenty.only),
+             estimate="{estimate}", 
+             statistic="{p.value}",
+             shape=term ~ model + statistic)
 ```
 
 Let's find out more about the schools that only reported data for 2020: 
