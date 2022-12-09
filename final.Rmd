@@ -15,6 +15,7 @@ library(rpart)
 library(rpart.plot)
 library(randomForest)
 library(sandwich)
+library(modelsummary)
 ```
 
 ```{r, eval=T, include=F}
@@ -284,7 +285,7 @@ wilcox.test(x = full.cases$total.cases[full.cases$religious == "Yes"],
 
 Interpret significance 
 
-# Linear Regression Models
+# Basic Linear Regression Models
 
 Of course, group tests are limited in that they do not take into account potential confounding variables that might reveal the significance of an institution's having a religious affiliation. To take into account the effects of these potential confounding variables — which we have already identified at length, as evidenced by the extensive list of predictors we compiled before beginning our analyses — we will fit linear models. We will then use these linear models to perform statistical inference on the coefficient of the `religious` predictor, determining whether there is a statistically significant relationship between an institution's religious affiliation and the number of cases that it recorded.
 
@@ -379,9 +380,111 @@ abline(h=0, col="gray")
 
 In the above plot for the model for `total.cases`, the spread of the residuals is much more consistent across the entire range of fitted values. Though it is not entirely uniform, it would appear reasonable enough to operate under the assumption of homoskedasticity, especially given that, as was demonstrated in Problem Set 3, $t$-based statistical inference procedures done using linear models are fairly robust to slight violations in the assumption of homoskedasticity. EXPAND UPON IF NECESSARY 
 
-## Laura's work from before
+## Determining if data from 2020 or 2020 and 2021 should be used 
+
+Interestingly, the effect of a school's reporting case data for 2021 changes the effect that `religious` has. 
 
 ```{r, eval=T}
+lm6.both.only <- lm(formula(lm6), 
+                    data=full.cases[!is.na(full.cases$cases_2021),])
+lm6.twenty.only <- lm(formula(lm6),
+                      data=full.cases[is.na(full.cases$cases_2021),])
+modelsummary(list("all"=lm6, "schools with data for both years"=lm6.both.only, 
+                  "schools with only 2020 data"=lm6.twenty.only),
+             statistic="{p.value}, [{conf.low},{conf.high}]")
+```
+
+Let's find out more about the schools that only reported data for 2020: 
+
+```{r, eval=T}
+only.twenty <- full.cases[is.na(full.cases$cases_2021),]
+both <- full.cases[!is.na(full.cases$cases_2021),]
+  
+table(only.twenty$religious)
+table(only.twenty$private)
+hist(only.twenty$total.headcount)
+hist(only.twenty$gap20repub)
+```
+
+t-test for difference in political leanings
+```{r, eval=T}
+t.test(both$gap20repub, only.twenty$gap20repub)
+```
+t-test for difference in size 
+```{r, eval=T}
+t.test(both$total.headcount, only.twenty$total.headcount)
+```
+
+z-test for proportion private
+```{r, eval=T}
+prop.test(x=matrix(c(sum(both$private == "Yes"), sum(both$private == "No"), 
+                     sum(only.twenty$private == "Yes"), 
+                     sum(only.twenty$private == "No")), nrow=2, byrow=T), 
+          n=c(length(both$private), length(only.twenty$private)))
+```
+
+z-test for `religious`
+```{r, eval=T}
+prop.test(x=matrix(c(sum(both$religious == "Yes"), sum(both$religious == "No"), 
+                     sum(only.twenty$religious == "Yes"), 
+                     sum(only.twenty$religious == "No")), nrow=2, byrow=T), 
+          n=c(length(both$religious), length(only.twenty$religious)))
+```
+
+z-test for `on.campus.housing`
+```{r, eval=T}
+prop.test(x=matrix(c(sum(both$on.campus.housing == "Yes"), sum(both$on.campus.housing == "No"), 
+                     sum(only.twenty$on.campus.housing == "Yes"), 
+                     sum(only.twenty$on.campus.housing == "No")), nrow=2, byrow=T), 
+          n=c(length(both$on.campus.housing), length(only.twenty$on.campus.housing)))
+```
+
+THE TWO SAMPLES OF SCHOOLS ARE CLEARLY DIFFERNET WITH RESPECT TO CERTAIN PREDICTORS — INTERACTION EFFECTS MIGHT BE AT PLAY. WE SHOULD RESTRICT SAMPLE TO CASES IN 2020, AND EXPLORE INTERACTION EFFECTS
+
+# Linear Models with Interaction Effects
+
+# In Search of a Parsimonious Model: Sequential Variable Selection Models
+
+```{r, eval=F}
+df = full.cases[,c("percent.cases","gap20repub", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
+
+df = na.omit(df)
+
+summary(model1 <- lm(log(percent.cases+epsilon) ~ mask.mandated.days + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
+
+
+interactionModel <- lm(log(percent.cases+epsilon) ~ (mask.mandated.days+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
+
+
+back.step <- step(model1, direction = "backward", k = 2)
+
+## including states, excluding days mandated:
+# removed columns are control, undergrad.headcount, percent.pacific.islander,on.campus.housing
+
+## including days mandated, excluding states:
+# removed columns are control, percent.american.native + percent.two.more.races+percent.NA.race,on.campus.housing+percent.disability
+
+forward.step = step(model1, scope = list(upper = formula(interactionModel)), direction = "forward")
+
+model0 = lm(log(percent.cases+1) ~ 1, full.cases)
+
+step = step(model1, scope = list(lower = formula(model0), upper = formula(interactionModel)),
+direction = "both")
+```
+
+Honestly not sure how to interpret and forward step model and the both-directions step model take forever to run. 
+
+# LASSO for Variable Section
+
+# Hierarchical Multi-level Models
+
+# Conclusions
+
+
+
+# Laura's work from before
+
+```{r, eval=F}
 # Not included in the below model: NCAA.football, religious.affiliation, 
 # mask.mandated days, as well as those subtracted from the formula of
 # the commented out lm1 below
@@ -418,43 +521,4 @@ df = full.cases
 
 # avg.grant.money, dorm.capacity, dorm.room.price, academic.degree
 ```
-
-
-# Sequential Variable Selection Models 
-
-```{r, eval=F}
-df = full.cases[,c("percent.cases","state", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
-
-df = na.omit(df)
-
-summary(model1 <- lm(log(percent.cases+epsilon) ~ mask.mandated.days + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
-
-
-interactionModel <- lm(log(percent.cases+epsilon) ~ (mask.mandated.days+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
-
-
-back.step <- step(model1, direction = "backward", k = 2)
-
-## including states, excluding days mandated:
-# removed columns are control, undergrad.headcount, percent.pacific.islander,on.campus.housing
-
-## including days mandated, excluding states:
-# removed columns are control, percent.american.native + percent.two.more.races+percent.NA.race,on.campus.housing+percent.disability
-
-forward.step = step(model1, scope = list(upper = formula(interactionModel)), direction = "forward")
-
-model0 = lm(log(percent.cases+1) ~ 1, full.cases)
-
-step = step(model1, scope = list(lower = formula(model0), upper = formula(interactionModel)),
-direction = "both")
-```
-
-Honestly not sure how to interpret and forward step model and the both-directions step model take forever to run. 
-
-# LASSO for Variable Section
-
-# Mixed-Effect Models
-
-# Conclusions
-
 
