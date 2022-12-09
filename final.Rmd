@@ -5,8 +5,8 @@ date: "December 13, 2022"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, results=TRUE, messages=FALSE)
 ```
 
 ```{r, eval=T, include=F}
@@ -16,6 +16,8 @@ library(rpart.plot)
 library(randomForest)
 library(sandwich)
 library(modelsummary)
+library(report)
+# library(rempsync)
 ```
 
 ```{r, eval=T, include=F}
@@ -41,11 +43,11 @@ Our data for this project comes from three sources:
 
 4. The presidential elections data from STAT 139 Problem Set 4. Of this data set, we will be particularly focused on the `gap20repub` predictor, which we will use to help characterize the political climate of the state in which each institution is located.  
 
-The data is $n = 1,855$ rows after removing Universities without stats or without matching IPEDS ids.
+The data has $n = 1,855$ rows after removing Universities without stats or without matching IPEDS ids.
 
 # Data Cleaning Procedures
 
-For this exploratory data analysis, the first step is to read our data from CSV files into R data frames. The `colleges` data frame stores the NYT data on Covid cases at universities, while the `ipeds` data frame stores the data will most of our predictor variables (university characteristics) taken from IPEDS. We then rename most of the columns in `ipeds` to make them shorter and easier to work with. 
+Our first step in cleaning the data is to read our data from CSV files into R data frames. The `colleges` data frame stores the NYT data on Covid cases at universities, while the `ipeds` data frame stores the data will most of our predictor variables (university characteristics) taken from IPEDS. We then rename most of the columns in `ipeds` to make them shorter and easier to work with. 
 
 ```{r, eval=T, echo = FALSE}
 # Read colleges from csv
@@ -107,7 +109,7 @@ ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation',
                               ~'dorm.room.price')
 ```
 
-Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious`, `catholic`, and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop the `control` column from the data frame, since it now contains redundant information.
+Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious`, `catholic`, and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop any unnecessary or redundant columns from the data frame.
 
 ```{r, eval=T, echo = FALSE}
 # Merge data frames, and remove duplicated "state" column 
@@ -140,7 +142,7 @@ md$dorm.capacity[md$on.campus.housing == "No"] <- 0
 write.csv(md,'merged_cases.csv')
 ```
 
-Finally, we look to add a column to the data frame that addresses the extent to which mask mandates were present in the state in which each institution is located. Below, we read out the mask mandates data from the CDC into a data frame from the CSV file, treat the appropriate columns as factors, and convert `date` into R's `Date` type.  
+We then look to add a column to the data frame that addresses the extent to which mask mandates were present in the state in which each institution is located. We read out the mask mandates data from the CDC into a data frame from the CSV file, treat the appropriate columns as factors, and convert `date` into R's `Date` type.  
 
 ```{r, eval=T, echo = FALSE}
 # Read mask.mandates from CSV file
@@ -154,7 +156,7 @@ mask.mandates[,factor.variables] <- lapply(mask.mandates[,factor.variables], as.
 mask.mandates$date <- as.Date(mask.mandates$date, format="%m/%d/%Y")
 ```
 
-We then create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
+The next step is to create a new simpler data frame to merge with `md`. This data frame contains only two columns: One with the name of each state, and the other with the number of days between July 1, 2020, and May 26, 2021, during which face masks were required in public in that state. We then merge this data frame with `md` to create `full.cases`, and create a column `total.cases` in `full.cases` that sums the `cases` and `cases_2021` columns.
 
 ```{r, eval=T, echo = FALSE}
 # Create new data frame to merge with md
@@ -227,53 +229,84 @@ write.csv(full.cases, "full_cases.csv")
 
 After performing the data cleaning procedures outlined above, we are left with the following ADJUST NUMBER! columns:
 
-**ipeds_id** 
+* **ipeds_id** 
 
-**institution.name**
+* **institution.name**
 
-**state**    
+* **state**    
 
-**private**
+* **private**
 
-**religious.affiliation**
+* **religious.affiliation**
 
-**religious**
+* **religious**
 
-**catholic**
+* **catholic**
 
-**tuition**
+* **tuition**
 
-**total.headcount**
+* **total.headcount**
 
-**undergrad.headcount** DO WE NEED BOTH? 
+* **percent.american.native**
 
-**percent.american.native**
+* **percent.asian**
 
-**percent.asian**
+* **percent.black**
 
-**percent.black**
+* **percent.hispanic.latino** 
 
-**percent.hispanic.latino** 
+* **percent.pacific.islander**
 
-**percent.pacific.islander**
+* **percent.white**     
 
-**percent.white**     
+* **percent.two.more.races**
 
-**percent.two.more.races**
+* **percent.NA.race**
 
-**percent.NA.race**
+* **percent.nonres.alien**
 
-**percent.nonres.alien**
+* **percent.women** 
 
-**percent.women** 
+* **avg.grant.money**
 
-[19] "avg.grant.money"          "grad.rate"                "percent.fin.aid"         
-[22] "percent.student.loan"     "occupational.degree"      "hs.equivalent.degree"    
-[25] "NCAA.football"            "percent.disability"       "on.campus.housing"       
-[28] "dorm.capacity"            "city"                     "college"                 
-[31] "cases"                    "cases_2021"               "religious"               
-[34] "catholic"                 "private"                  "mask.mandated.days"      
-[37] "total.cases"              "gap20repub"               "percent.cases" 
+* **grad.rate**
+
+* **percent.fin.aid** 
+
+* **percent.student.loan**
+
+* **occupational.degree**
+
+* **hs.equivalent.degree**
+
+* **NCAA.football**
+
+* **percent.disability**
+
+* **on.campus.housing** 
+
+* **dorm.capacity**
+
+* **city**
+
+* **college**
+
+* **cases**
+
+* **cases_2021**
+
+* **religious**   
+
+* **catholic**
+
+* **private**
+
+* **mask.mandated.days**
+
+* **total.cases**
+
+* **gap20repub**
+
 
 # Group Testing
 
@@ -367,7 +400,7 @@ plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
 plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
 ```
 
-We identify that `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, and `percent.pacific.islander` would benefit from being log-transformed; given the left-skenwess of its distribution, we also determined that `percent.fin.aid` would be best transformed using the following transformation `log(100 - percent.fin.aid + 1)`. The following plots show that the distribution of these predictors are much better after being transformed. 
+We identify that `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, and `percent.pacific.islander` would benefit from being log-transformed; given the left-skewness of its distribution, we also determined that `percent.fin.aid` would be best transformed using the following transformation `log(100 - percent.fin.aid + 1)`. The following plots show that the distribution of these predictors are much better after being transformed. 
 
 ```{r, eval=T}
 par(mfrow=c(4,2), mar=c(1,1,1,1))
@@ -410,7 +443,7 @@ data.frame(ols=round(summary(lm6)$coef[,'Std. Error'],4),
                             summary(lm6)$coef[,'Std. Error']),4))
 ```
 
-As the table above shows, the standard errors are the most part consistent between the two models. ADDRESS
+As the table above shows, the standard errors are the most part consistent between the two models. ADDRESS ASK TF!
 
 ```{r, eval=T}
 lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + 
@@ -432,7 +465,9 @@ In the above plot for the model for `total.cases`, the spread of the residuals i
 
 ## Determining if data from 2020 or 2020 and 2021 should be used 
 
-Interestingly, the effect of a school's reporting case data for 2021 changes the effect that `religious` has. 
+Naturally, there is a temptation to forget about the case data for only 2020 and to focus on case data for the entire academic year (the entire time period during which case data was collected by the *New York Times*). There is one problem, however: While the *New York Times* was able to compile case data for all of the schools in our data set for the fall semester of that year, it was not able to find data for 297 schools for the spring semester. This is a nontrivial number of observations given that our data set only consists of 1855 different institutions; thus, to determine whether it would be sound to remove these 297 observations and fit models and perform statistical inferences on data from the entire academic year, we must determine whether the two groups of schools in question — those that reported data for the entire academic year, and those that did not — are sufficiently similar to one another. 
+
+The first step is to compare the coefficients of our baseline model (`lm6` above) when it is fit to all 1855 observations, as well as individually to the two different groups of schools in question. The coefficient estimates, along with the p-values (not adjusted to be heteroskedastically consistent) are given below.
 
 ```{r, eval=T}
 lm6.both.only <- lm(formula(lm6), 
@@ -446,6 +481,8 @@ modelsummary(list("all schools"=lm6,
              statistic="{p.value}",
              shape=term ~ model + statistic)
 ```
+
+As we can see, when the sample of the institutions used to fit the model changes, some of the coefficient estimates change vastly. Take, for example, the coefficient estimate for `religionYes`, which can be interpreted as the change in cases that we would expect if a given school were to have a religious affiliation rather than not have one. This coefficient estimate is not statistically significant when all institutions are considered together, is positive and statistically significant when the institutions that reported data for the entire academic year are considered, and negative and statistically significant when the institutions that only reported data for the fall are considered. In fact, if one were to inspect the table above, they would notice that the majority of predictors included in this baseline models experienced changes in coefficient estimates and statistical significance as the sample of institutions considered was changed.  
 
 Let's find out more about the schools that only reported data for 2020: 
 
