@@ -533,17 +533,154 @@ THE TWO SAMPLES OF SCHOOLS ARE CLEARLY DIFFERNET WITH RESPECT TO CERTAIN PREDICT
 
 # Linear Models with Interaction Effects
 
+Comments: 
+- Assumed use of total.cases - can change
+- should we do a polynomial model? not possible with religous but something else?
+- What do you think of the explanations? Is there too much here? 
+
+Above we performed several linear regressions with no interactions and multiple predictors. Our "base model" includes all of the predictors we include in this paper, which are: `religious`, `tuition`, `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, `percent.pacific.islander`, `percent.white`, `percent.two.more.races`, `percent.women`, `grad.rate`, `percent.fin.aid`, `on.campus.housing`, `gap20repub`, `private`, `percent.student.loan`, `mask.mandated.days`, `occupational.degree` and `hs.equivelant.degree`. Above we discuss using 2020 cases, 2021 cases, or the total number of cases, concluding that we will use total cases for the remaining models. 
+
+We will now look at interaction effects and their significance in linear regression models for this dataset. First, we will look at a model with fewer predictors; including only `religious`, `total.headcount`, `grad.rate`, `percent.fin.aid`, `dorm.capacity`, and `gap20repub` to predict 2020 cases. We chose these variables because they are all different from one another and were statistically significant in predicting 2020 cases in a simple linear regression above. See `lm8` for the model with no interaction effects, `lm9` for interaction effects with the `religious` variables, and `lm10` for the all interaction effects between the variables in `lm8`: 
+
+```{r}
+
+lm8 <- lm(log(total.cases + epsilon) ~ religious + log(total.headcount+epsilon) + 
+            + percent.fin.aid + log(dorm.capacity+epsilon) + gap20repub, 
+          data = full.cases)
+            
+summary(lm8)
+
+lm9 <- lm(log(total.cases + epsilon) ~ (log(total.headcount+epsilon) + 
+            + percent.fin.aid + log(dorm.capacity+epsilon) + gap20repub)*religious, 
+          data = full.cases)
+
+summary(lm9)
+
+
+lm10 <- lm(log(total.cases + epsilon) ~ (religious + log(total.headcount+epsilon) + 
+            + percent.fin.aid + log(dorm.capacity+epsilon) + gap20repub)^2, 
+          data = full.cases)
+
+summary(lm10)
+
+```
+We see from the model without interaction effects that all chosen variables are statistically significant in predicting total cases in this specific model. Notably, the coefficient on "religiousYes" is positive and statistically significant, indicating that a school being religious predicts a higher number of cases than a non-religious institution. The interaction model with the variables from the previous models and their interactions with the religious variable has a slightly higher r-squared value than the model without interactions; `r summary(lm9)$r.squared`, versus `r summary(lm8)$r.squared`. 
+
+There was only one interaction effect that was statistically significant, that between `gap20repub` and `religious`. Even though `gap20repub` has a statistically significant positive effect when predicting cases across models when keeping `religious` constant (as one might expect; institutions in more republican states likely had fewer COVID-19 precautions, resulting in disproportionately higher cases), the relationship between `gap20repub` and `total.cases` is not quite as strong for institutions that are religious (though the coefficient is close to 0). This is statistically significant, with the negative interaction effect coefficient having a p-value of $0.00155$, which is significantly below the level $\alpha = 0.05$. 
+
+Only one statistically significant interaction effect explains why the $R^2$ value for the `religious` interaction model was not a lot greater than that for the no interaction model. Conversely, the $R^2$ for the full interaction effect model (with these few selected variables) is a significant amount greater, with value `r summary(lm10)$r.squared`. 
+
+```{r}
+# ESS F-test
+anova(lm8, lm9)
+
+# ESS F-test
+anova(lm8, lm10)
+```
+
+From the ESS F-test, we see that there is evidence that the `religious` interaction terms contribute to the model. More significantly, there is evidence that the other interaction terms in the third model contribute even more significantly. This indicates that though `religious` has some interaction with the confounding variables, these predictors interact with one another more significantly.
+
+```{r}
+religYes = (full.cases$religious == "Yes")
+
+plot(total.cases[religYes == TRUE] ~ gap20repub[religYes == TRUE],
+     data = full.cases,
+     pch = 21, cex = 1.2, col=rgb(0,0.1,1,0.8),
+     ylab = "total cases",xlab = "gap20repub",
+     xlim = c(-90, 50), ylim = c(0,2000))
+points(full.cases$gap20repub[religYes == FALSE], 
+       full.cases$total.cases[religYes == FALSE],
+       pch = 21,cex = 1.2,  col=rgb(1,0.1,0,0.3))
+
+abline(a = lm9$coef[1], b = lm9$coef[5], lty = 2, col = "royalblue4",
+lwd = 2)
+abline(a = lm9$coef[1]+lm9$coef[6], b = lm9$coef[5]+lm9$coef[10], lty = 2, col = "red",
+lwd = 2)
+
+```
+
+The above plot confirms that adding the interaction between `religious` and the other selected variables, though statistically significant for the variable `gap20repub`, does not change the model significantly. This is clear because the two predictive lines are nearly identical. They are low compared visually to the data due to the high number of 0 cases.
+
+We will next look at a full interaction model with all variables as used in the base linear regression model, as well as their interaction with only religious. We will simply compare $R^2$, p-values, and RMSE to determine the importance of interaction in the models. 
+
+```{r}
+lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
+            on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree, data=full.cases)
+
+summary(lm7)$r.squared
+
+religiousInteraction <- lm(log(total.cases + epsilon) ~ religious *( tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
+            on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree), data=full.cases)
+
+summary(religiousInteraction)$r.squared
+#summary(religiousInteraction)
+
+fullInteraction <- lm(log(total.cases + epsilon) ~ (religious + tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
+            on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree)^2, data=full.cases)
+
+summary(fullInteraction)$r.squared
+#summary(fullInteraction)
+
+RMSE <- function(y, yhat) {
+     SSE = sum(na.omit(y-yhat)^2)
+     return(sqrt(SSE/length(y)))
+}
+
+# getting errors so maybe don't use?
+RMSE(full.cases$total.cases, predict(lm7, full.cases))
+RMSE(full.cases$total.cases, predict(lm8, full.cases))
+RMSE(full.cases$total.cases, predict(lm9, full.cases))
+
+
+anova(lm7, religiousInteraction)
+
+anova(religiousInteraction, fullInteraction)
+
+# ESS F-test
+anova(lm8, lm10)
+
+```
+- Talk a couple p-values
+
+- From the ESS F-test, we can see that the interaction terms with just religious contribute to the model. Furthermore, the full interaction terms contribute in addition to the just religious terms. 
+
+- conclude this section? there is a huge weight with interaction terms, but religious does not interact with other variables as much as they interact with one another. 
+
 # In Search of a Parsimonious Model: Sequential Variable Selection Models
 
 ```{r, eval=F}
-df = full.cases[,c("percent.cases","gap20repub", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious")]
+df = full.cases[,c("gap20repub", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious","total.cases")]
 
 df = na.omit(df)
 
-summary(model1 <- lm(log(percent.cases+epsilon) ~ mask.mandated.days + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
+summary(model1 <- lm(log(total.cases+epsilon) ~ mask.mandated.days + private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women           +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious, data = df))
 
 
-interactionModel <- lm(log(percent.cases+epsilon) ~ (mask.mandated.days+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
+interactionModel <- lm(log(total.cases+epsilon) ~ (mask.mandated.days+ private+tuition+total.headcount+undergrad.headcount+percent.american.native+percent.asian+ percent.black+percent.hispanic.latino+percent.pacific.islander+percent.white+percent.two.more.races+percent.NA.race+percent.nonres.alien+percent.women +grad.rate+percent.fin.aid+percent.student.loan+NCAA.football+percent.disability+on.campus.housing+religious)^2, data = df)
 
 
 back.step <- step(model1, direction = "backward", k = 2)
@@ -554,12 +691,12 @@ back.step <- step(model1, direction = "backward", k = 2)
 ## including days mandated, excluding states:
 # removed columns are control, percent.american.native + percent.two.more.races+percent.NA.race,on.campus.housing+percent.disability
 
-forward.step = step(model1, scope = list(upper = formula(interactionModel)), direction = "forward")
+#forward.step = step(model1, scope = list(upper = formula(interactionModel)), direction = "forward")
 
-model0 = lm(log(percent.cases+1) ~ 1, full.cases)
+#model0 = lm(log(percent.cases+1) ~ 1, full.cases)
 
-step = step(model1, scope = list(lower = formula(model0), upper = formula(interactionModel)),
-direction = "both")
+#step = step(model1, scope = list(lower = formula(model0), upper = formula(interactionModel)),
+#direction = "both")
 ```
 
 Honestly not sure how to interpret and forward step model and the both-directions step model take forever to run. 
@@ -579,9 +716,9 @@ Honestly not sure how to interpret and forward step model and the both-direction
 # mask.mandated days, as well as those subtracted from the formula of
 # the commented out lm1 below
 
-full.cases$percent.cases <- full.cases$total.cases/full.cases$total.headcount
+#full.cases$percent.cases <- full.cases$total.cases/full.cases$total.headcount
 
-summary(lm1 <- lm(log(percent.cases + epsilon) ~ religious + catholic + 
+summary(lm1 <- lm(log(total.cases + epsilon) ~ religious + catholic + 
             tuition + total.headcount + 
             undergrad.headcount + percent.american.native + percent.asian + 
             percent.black + percent.hispanic.latino + percent.pacific.islander +
@@ -592,23 +729,22 @@ summary(lm1 <- lm(log(percent.cases + epsilon) ~ religious + catholic +
             occupational.degree + hs.equivalent.degree, 
           data=full.cases))
 
-summary(lm2 <- lm(log(percent.cases + epsilon) ~ religious + private + tuition, full.cases))
+summary(lm2 <- lm(log(total.cases + epsilon) ~ religious + private + tuition, full.cases))
 
-summary(lm3 <-lm(log(percent.cases+epsilon)~(religious + tuition + percent.white+percent.black+mask.mandated.days)^2,full.cases))
+summary(lm3 <-lm(log(total.cases+epsilon)~(religious + tuition + percent.white+percent.black+mask.mandated.days)^2,full.cases))
 
 full.cases.tuit = full.cases[complete.cases(full.cases[,c("tuition")]),]
 
-lm5 = lm(percent.cases ~ poly(tuition, 3, raw=TRUE), data = full.cases.tuit)
+lm5 = lm(total.cases ~ poly(tuition, 3, raw=TRUE), data = full.cases.tuit)
 summary(lm5)
 
 x=500:61500
 yhat = predict(lm5,new=data.frame(tuition=x))
 
-plot(percent.cases~tuition,data=full.cases.tuit)
+plot(total.cases~tuition,data=full.cases.tuit)
 lines(yhat~x,col="magenta",lwd=4)
 
 df = full.cases
 
 # avg.grant.money, dorm.capacity, dorm.room.price, academic.degree
 ```
-
