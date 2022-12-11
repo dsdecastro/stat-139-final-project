@@ -14,9 +14,9 @@ library(dplyr)
 library(rpart)
 library(rpart.plot)
 library(randomForest)
-library(sandwich)
 library(modelsummary)
-library(report)
+library(sandwich)
+library(ggplot2)
 
 library(lemon)
 knit_print.data.frame <- lemon_print
@@ -407,50 +407,37 @@ Of course, group tests are limited in that they do not take into account potenti
 
 ## Checking the Assumptions of Linear Regression Models
 
-Before we can fit more complicated models, we must first check the assumptions of linear regression. We begin by checking the assumption of linearity, plotting `cases` versus all of the quantitative predictors that we would like to include in our analyses: 
+Before we can fit more complicated models, we must first check the assumptions of linear regression. We begin by checking the assumption of linearity. To do so, we plotted `cases` versus all of the quantitative predictors that we would like to include in our analyses (the complete list of these plots can be found in Appendix A). We the identified that `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, and `percent.pacific.islander` would benefit from being log-transformed; given the left-skewness of its distribution, we also determined that `percent.fin.aid` would be best transformed using the following transformation `log(100 - percent.fin.aid + 1)`. The following plots show that the distribution of these predictors before and after being transformed. *In these plots, the y-axis is always log-transformed cases* (2020); the axis label is not printed in order to save space. 
 
-```{r, eval=T}
-par(mfrow=c(3,2), mar=1.5 * c(1,1,1,1), cex=0.5)
-plot(log(total.cases + epsilon) ~ tuition, data=full.cases,
-     main="tuition")
-plot(log(total.cases + epsilon) ~ total.headcount, data=full.cases,
-     main="total.headcount")
-plot(log(total.cases + epsilon) ~ percent.american.native, data=full.cases,
-     main="percent.american.native")
-plot(log(total.cases + epsilon) ~ percent.asian, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.black, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.hispanic.latino, data=full.cases)
-par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
-plot(log(total.cases + epsilon) ~ percent.pacific.islander, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.white, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.two.more.races, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.women, data=full.cases)
-plot(log(total.cases + epsilon) ~ grad.rate, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.fin.aid, data=full.cases)
-par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
-plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
-plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
+```{r, eval=T, fig.height=1.5, message=FALSE}
+library(patchwork)
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=total.headcount)) + geom_point() + ylab("")) + 
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(total.headcount))) + geom_point() + ylab(""))))
+
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=percent.american.native)) + geom_point() + ylab("")) + 
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(percent.american.native))) + geom_point() + ylab(""))))
+
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=percent.asian)) + geom_point() + ylab("")) + 
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(percent.asian))) + geom_point() + ylab(""))))
+
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=percent.black)) + geom_point() + ylab("")) +
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(percent.black))) + geom_point() + ylab(""))))
+
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=percent.hispanic.latino)) + geom_point() + ylab("")) + 
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(percent.hispanic.latino))) + geom_point() + ylab(""))))
+
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=percent.pacific.islander)) + geom_point() + ylab("")) + 
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(percent.pacific.islander))) + geom_point() + ylab(""))))
+
+suppressWarnings(print((ggplot(full.cases, aes(y=log(cases + epsilon), x=percent.fin.aid)) + geom_point() + ylab("")) + 
+  (ggplot(full.cases, aes(y=log(cases + epsilon), x=log(100-percent.fin.aid+1))) + geom_point() + ylab(""))))
 ```
 
-We identify that `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, and `percent.pacific.islander` would benefit from being log-transformed; given the left-skewness of its distribution, we also determined that `percent.fin.aid` would be best transformed using the following transformation `log(100 - percent.fin.aid + 1)`. The following plots show that the distribution of these predictors are much better after being transformed. 
+We claim that with these transformations, the assumption of linearity is reasonable. 
 
-```{r, eval=T}
-par(mfrow=c(4,2), mar=c(1,1,1,1))
-plot(log(total.cases + epsilon) ~ log(total.headcount), data=full.cases)
-plot(log(total.cases + epsilon) ~ log(percent.american.native), data=full.cases)
-plot(log(total.cases + epsilon) ~ log(percent.asian), data=full.cases)
-plot(log(total.cases + epsilon) ~ log(percent.black), data=full.cases)
-plot(log(total.cases + epsilon) ~ log(percent.hispanic.latino), data=full.cases)
-plot(log(total.cases + epsilon) ~ log(percent.pacific.islander), data=full.cases)
-plot(log(total.cases + epsilon) ~ log(100-percent.fin.aid+1), data=full.cases)
-```
+What remains to be shown is that the assumption of homoskedasticity is reasonable. In order to check this assumption, we fit basic regression models for `cases` and `total.cases` using all of the predictors in our predictor set.
 
-After these transformations, the linearity assumptions seems much more reasonable for each of the quantitative predictors. 
-
-In order to check the assumption of homoskedasticity, we fit basic regression models for `cases` and `total.cases` using all of the predictors in our predictor set.
-
-```{r, eval=T}
+```{r, eval=T, fig.height=4}
 lm6 <- lm(log(cases + epsilon) ~ religious + tuition + 
             log(total.headcount+epsilon) + 
             log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
@@ -462,23 +449,26 @@ lm6 <- lm(log(cases + epsilon) ~ religious + tuition +
             private + percent.student.loan + mask.mandated.days +
             occupational.degree + hs.equivalent.degree, data=full.cases)
 
-plot(lm6$residuals ~ lm6$fitted.values, main="cases")
+plot(lm6$residuals ~ lm6$fitted.values, main="cases (2020)", xlab="fitted values",
+     ylab="residuals")
 abline(h=0, col="gray")
 ```
 
-As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. Given that the vast majority of residuals are clustered around a region with consistent spread, we believe that the assumption of homoskedasticity will be reasonable enough to accept in this case. As a check, we will compare the standard errors generated by heteroskedasticity-consistent method with those generated by the standard OLS approach: 
+As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. The behavior of this graph is interesting: The lower bound for the residuals appears to follow a negatively sloped line, and one that contains a solid number of points. ADDRESS ASK TF!
 
-```{r, eval=T}
+Given that the vast majority of residuals are clustered around a region with consistent spread, we believe that the assumption of homoskedasticity will be reasonable enough to accept in this case. As a check, we will compare the standard errors generated by heteroskedasticity-consistent method with those generated by the standard OLS approach: 
+
+```{r, eval=T, render=lemon_print}
 vcov.robust = vcovHC(lm6, type="HC")
 data.frame(ols=round(summary(lm6)$coef[,'Std. Error'],4), 
            robust=round(sqrt(diag(vcov.robust)),4), 
-           diff=round(abs(sqrt(diag(vcov.robust)) - 
+           "absolute difference"=round(abs(sqrt(diag(vcov.robust)) - 
                             summary(lm6)$coef[,'Std. Error']),4))
 ```
 
 As the table above shows, the standard errors are the most part consistent between the two models. ADDRESS ASK TF!
 
-```{r, eval=T}
+```{r, eval=T, fig.height=4}
 lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + 
             log(total.headcount+epsilon) + 
             log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
@@ -490,7 +480,8 @@ lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition +
             private + percent.student.loan + mask.mandated.days +
             occupational.degree + hs.equivalent.degree, data=full.cases)
 
-plot(lm7$residuals ~ lm7$fitted.values, main="total.cases")
+plot(lm7$residuals ~ lm7$fitted.values, main="total.cases (2020-21)", 
+     xlab="fitted values", ylab="residuals")
 abline(h=0, col="gray")
 ```
 
@@ -517,49 +508,50 @@ modelsummary(list("all schools"=lm6,
 
 As we can see, when the sample of the institutions used to fit the model changes, some of the coefficient estimates change vastly. Take, for example, the coefficient estimate for `religionYes`, which can be interpreted as the change in cases that we would expect if a given school were to have a religious affiliation rather than not have one. This coefficient estimate is not statistically significant when all institutions are considered together, is positive and statistically significant when the institutions that reported data for the entire academic year are considered, and negative and statistically significant when the institutions that only reported data for the fall are considered. In fact, if one were to inspect the table above, they would notice that the majority of predictors included in this baseline models experienced changes in coefficient estimates and statistical significance as the sample of institutions considered was changed.  
 
-Let's find out more about the schools that only reported data for 2020: 
+Clearly, then, there are some underlying differences between the schools that did and the schools that did not report case data for the spring semester of the 2020-21 academic year. What, then, are these differences? 
 
-```{r, eval=T}
+First, we investigate the difference in the political leanings of the states in which these schools were located, as given by `gap20repub`. To do so, we perform a $t$-test (the assumptions that allow us to do so have been explored above), with the null hypothesis being that the true means `gap20repub` are equal between the two groups of institutions, and the alternative being that the true means are different. The result of this test is shown below. 
+
+```{r, eval=T, render=lemon_print}
 only.twenty <- full.cases[is.na(full.cases$cases_2021),]
 both <- full.cases[!is.na(full.cases$cases_2021),]
-  
-table(only.twenty$religious)
-table(only.twenty$private)
-hist(only.twenty$total.headcount)
-hist(only.twenty$gap20repub)
+
+gap20.test <- t.test(both$gap20repub, only.twenty$gap20repub)
+data.frame(predictor=c("gap20repub"), test.statistic=c(gap20.test$statistic),
+           df=c(gap20.test[[2]]),
+           p.value=c(gap20.test$p.value))
 ```
 
-t-test for difference in political leanings
-```{r, eval=T}
-t.test(both$gap20repub, only.twenty$gap20repub)
-```
-t-test for difference in size 
-```{r, eval=T}
-t.test(both$total.headcount, only.twenty$total.headcount)
-```
+With a p-value that is much smaller than our $\alpha =0.05$ (again, because we do not assume equal variances between the groups, the Welch approximation for degrees of freedom is used), we reject the null hypothesis, concluding that the true mean `gap20repub` is different for the schools that did report case data for 2021 versus those that did not. As it turns out, the 95% $t$-based confidence interval for the mean `gap20repub` for the schools that did report 2021 case data minus the mean `gap20repub` for the schools that did not is (-9.468120, -4.959647) — thus, we conclude that the schools that did report 2021 case data are located in states that are considerably more left-leaning than the schools that did not. 
 
-z-test for proportion private
-```{r, eval=T}
-prop.test(x=matrix(c(sum(both$private == "Yes"), sum(both$private == "No"), 
-                     sum(only.twenty$private == "Yes"), 
-                     sum(only.twenty$private == "No")), nrow=2, byrow=T), 
-          n=c(length(both$private), length(only.twenty$private)))
-```
+We repeat this sort of analysis for `total.headcount`, `tuition`, `percent.fin.aid`, `mask.mandated.days`, `on.campus.housing`, and `religious`, predictors that we have chosen based on large differences in the coefficient estimates produced by the models above when fit to only one of the two subgroups of institutions. We use a two-sided $t$-test for the quantitative variables and two-sided z-tests for proportions (ADDRESS) for the `categorical` predictors. The hypotheses are similar to above, the null being that the true means/proportions are equal between the two groups, and the alternative being that they are not equal. As per the results shown below, the tests for all six of these predictors showed statistically significant differences between the two groups of universities. 
 
-z-test for `religious`
-```{r, eval=T}
-prop.test(x=matrix(c(sum(both$religious == "Yes"), sum(both$religious == "No"), 
-                     sum(only.twenty$religious == "Yes"), 
-                     sum(only.twenty$religious == "No")), nrow=2, byrow=T), 
-          n=c(length(both$religious), length(only.twenty$religious)))
-```
-
-z-test for `on.campus.housing`
-```{r, eval=T}
-prop.test(x=matrix(c(sum(both$on.campus.housing == "Yes"), sum(both$on.campus.housing == "No"), 
+```{r, eval=T, render=lemon_print}
+size.test <- t.test(both$total.headcount, only.twenty$total.headcount)
+tuition.test <- t.test(both$tuition, only.twenty$tuition)
+fin.aid.test <- t.test(both$percent.fin.aid, only.twenty$percent.fin.aid)
+mask.test <- t.test(both$mask.mandated.days, only.twenty$mask.mandated.days)
+on.campus.test <- prop.test(x=matrix(c(sum(both$on.campus.housing == "Yes"), sum(both$on.campus.housing == "No"), 
                      sum(only.twenty$on.campus.housing == "Yes"), 
                      sum(only.twenty$on.campus.housing == "No")), nrow=2, byrow=T), 
           n=c(length(both$on.campus.housing), length(only.twenty$on.campus.housing)))
+religious.test <- prop.test(x=matrix(c(sum(both$religious == "Yes"), sum(both$religious == "No"), 
+                     sum(only.twenty$religious == "Yes"), 
+                     sum(only.twenty$religious == "No")), nrow=2, byrow=T), 
+          n=c(length(both$religious), length(only.twenty$religious)))
+
+data.frame(predictor=c("total.headcount", "tuition", "percent.fin.aid",
+                       "mask.mandated.days", "on.campus.housing", 
+                       "religious"),
+           test.statistic=c(size.test$statistic, tuition.test$statistic,
+                            fin.aid.test$statistic, mask.test$statistic,
+                            on.campus.test$statistic, religious.test$statistic),
+           df=c(size.test[[2]], tuition.test[[2]], fin.aid.test[[2]], 
+                mask.test[[2]], on.campus.test[[2]], religious.test[[2]]),
+           p.value=c(size.test$p.value, tuition.test$p.value, 
+                     fin.aid.test$p.value, 
+                     mask.test$p.value, on.campus.test$p.value, 
+                     religious.test$p.value))
 ```
 
 THE TWO SAMPLES OF SCHOOLS ARE CLEARLY DIFFERNET WITH RESPECT TO CERTAIN PREDICTORS — INTERACTION EFFECTS MIGHT BE AT PLAY. WE SHOULD RESTRICT SAMPLE TO CASES IN 2020, AND EXPLORE INTERACTION EFFECTS
@@ -740,6 +732,32 @@ Honestly not sure how to interpret and forward step model and the both-direction
 
 # Conclusions
 
+
+# Appendix A: Plots to Check the Assumption of Linearity
+
+```{r, eval=T}
+par(mfrow=c(3,2), mar=1.5 * c(1,1,1,1), cex=0.5)
+plot(log(total.cases + epsilon) ~ tuition, data=full.cases,
+     main="tuition")
+plot(log(total.cases + epsilon) ~ total.headcount, data=full.cases,
+     main="total.headcount")
+plot(log(total.cases + epsilon) ~ percent.american.native, data=full.cases,
+     main="percent.american.native")
+plot(log(total.cases + epsilon) ~ percent.asian, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.black, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.hispanic.latino, data=full.cases)
+par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
+plot(log(total.cases + epsilon) ~ percent.pacific.islander, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.white, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.two.more.races, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.women, data=full.cases)
+plot(log(total.cases + epsilon) ~ grad.rate, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.fin.aid, data=full.cases)
+par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
+plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
+plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
+plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
+```
 
 
 # Laura's work from before
