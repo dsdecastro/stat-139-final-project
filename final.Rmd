@@ -17,7 +17,9 @@ library(randomForest)
 library(sandwich)
 library(modelsummary)
 library(report)
-# library(rempsync)
+
+library(lemon)
+knit_print.data.frame <- lemon_print
 ```
 
 ```{r, eval=T, include=F}
@@ -350,12 +352,21 @@ qqline(log(full.cases$total.cases + epsilon))
 
 Now that we have shown the assumptions of Student-$t$ tests to be reasonable, we can proceed to perform the test itself. We perform two two-sided $t$-tests for a difference in means. In each case, the null hypothesis is that the true mean case counts in the two groups — religiously affiliated and non-religiously affiliated institutions — are equal over the given time period, and the alternative is that they are not equal. As in the rest of the paper, we will use the standard confidence level of $\alpha = 0.05$, for the sake of convenience and conformity. Below are the results from these tests. 
 
-```{r, eval=T}
-t.test(log(cases + epsilon) ~ religious, data=full.cases)
-t.test(log(total.cases + epsilon) ~ religious, data=full.cases)
+```{r, eval=T, render=lemon_print}
+cases.t.test <- t.test(log(cases + epsilon) ~ religious, data=full.cases)
+total.t.test <- t.test(log(total.cases + epsilon) ~ religious, data=full.cases)
+
+data.frame(sample=c("2020 only", "entire year"), 
+           test.statistic=c(cases.t.test$statistic, total.t.test$statistic),
+           df=c(cases.t.test[[2]], total.t.test[[2]]),
+           p.value=c(cases.t.test$p.value, total.t.test$p.value))
 ```
 
-Interpret statistical significance
+In both tests, we see that our p-value is greater than the significance level of 0.05; we thus fail to reject the null hypothesis in both cases — we do not have statistically significant evidence to suggest that the true mean case counts, both for the fall semester and for the entire year, are different between the religiously affiliated and non-religiously affiliated institutions. Note that the degrees of freedom — which are not integers owing to R's use of the Welch approximation — are different for the two tests. This is because the test using the `total.cases` data has fewer observations, since some schools in our sample did not report case counts for the spring semester. This issue is tackled in greater detail below (see "Determining whether data from 2020 or 2020 and 2021 should be used"). 
+
+<!--- 
+
+TF Sumhith recommended that we do not anyting based on `religious.affiliation` since there are so many different groups. Better to just focus on `religion`. 
 
 ## ANOVA
 
@@ -365,20 +376,30 @@ for.rel.affil <- for.rel.affil[complete.cases(for.rel.affil),]
 summary(aov(cases ~ religious.affiliation, data=for.rel.affil))
 ```
 
-Shows that just breaking observations into religious vs. not religious (or catholic vs. not catholic) is much more informative than considering the specific religious affiliation of each school. 
+Shows that just breaking observations into religious vs. not religious (or catholic vs. not catholic) is much more informative than considering the specific religious affiliation of each school. -->
 
 ## Non-Parametric Testing — Wilcox Rank Sum Test
 
-Motivations for non-parametric testing, and hypotheses 
+We will also perform the non-parametric Wilcox Rank Sum Test to determine whether the case counts are different between religiously affiliated and non-religiously affiliated schools. The strength of this non-parametric test lies in the fact that it does not rely on a assumption on the distribution of the data-generating process of the sample follows. Thus, though we are confident in having shown above that the distributions of the log-transformed responses are sufficiently approximately normal, for the sake of completeness, we will perform this non-parametric test, and see if it leads us to the same conclusions. 
 
-```{r, eval=T}
-wilcox.test(x = full.cases$cases[full.cases$religious == "Yes"], 
+Again, we will perform the Wilcox Rank Sum Test on data from just the fall semester and on data from the entire academic year. For the following two tests, the null hypothesis is that the true average quantiles within the two groups — when the data from both groups are ranked together — are the same, while the alternative hypothesis is that there is an association between group status and the average quantile of the observations in the entire population. 
+
+```{r, eval=T, render=lemon_print}
+cases.wilcox <- wilcox.test(x = full.cases$cases[full.cases$religious == "Yes"], 
             y = full.cases$cases[full.cases$religious == "No"], 
             alternative='two.sided', exact = FALSE, correct = FALSE, 
             conf.int = TRUE)
+total.wilcox<-wilcox.test(x=full.cases$total.cases[full.cases$religious=="Yes"], 
+            y = full.cases$total.cases[full.cases$religious == "No"], 
+            alternative='two.sided', exact = FALSE, correct = FALSE, 
+            conf.int = TRUE)
+
+data.frame(sample=c("2020 only", "entire year"), 
+           test.statistic=c(cases.wilcox$statistic, total.wilcox$statistic),
+           p.value=c(cases.wilcox$p.value, total.wilcox$p.value))
 ```
 
-Interpret significance 
+As the results above show, neither test was statistically significant at the 0.05 confidence level; we thus again fail to reject the null hypothesis, concluding that there is no statistically significant evidence to suggest that the there is an association between religious affiliation and average quantile of case counts in either sample. 
 
 # Basic Linear Regression Models
 
