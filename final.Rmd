@@ -310,36 +310,48 @@ After performing the data cleaning procedures outlined above, we are left with t
 
 # Group Testing
 
-Explain motivation for group testing
+To begin our analyses, we will perform a range of group tests to determine whether the institutions with a religious affiliation had a higher true average number of Covid cases than religious institutions without a religious affiliation. In the following analyses, we will test whether or not the true average number of cases in the fall semester — i.e., the case counts for just 2020 in the NYT data set, `cases` — were different for these two groups of institutions, as well as whether the true average number of cases for the entire academic year —  see the description of `total.cases` — different for the two groups of institutions. We will perform both sets of analyses, because they are so fast and easy to perform and interpret. Later, as we bfit linear models to perform more complicated statistical inference procedures with respect to our data set, we will demonstrate why a focus will be placed on case counts from the fall semester only (see "Determining whether data from 2020 or 2020 and 2021 should be used").
 
 ## Checking the assumptions for $t$-based methods
 
-For unpooled $t$-based test for a difference in sample means, there are three assumptions:
+We begin with the most commonly used test for a difference in means: the Student-$t$ test. Of course, before we can perform this test, we must make sure that its underlying assumptions are reasonable. Because we have no reason to assume that the variances in the observations between both groups — religiously affiliated and not religiously affiliated universities — are the same, we will use the unpooled $t$-test. For unpooled $t$-based test for a difference in sample means, there are three assumptions:
 
-1) **Observations are independent.** Explain why reasonable. 
+1) **Observations are independent.** We claim that this observation is reasonable. Even though the geographic proximity of universities — or just a relationship between universities in which students from one frequently visit the other — might have caused there to be some correlation between case counts at these different schools, we claim that since universities are somewhat insular communities — students tend to stay within their own social sphere of their university —  this is not a major concern. Overall, with such a rich data set, in which a wide and diverse range of characteristics are expressed across all 1,855 observations, this assumption of independence of observations seems reasonable. 
 
-2) **Groups are independent of one another.** Explain why reasonable. 
+2) **Groups are independent of one another.** There is no reason to suggest that the two groups in question — religious institutions and non-religious institutions — are not independent from one another. Above, we justified that all of the observations in our data set are sufficiently independent from one another — if this is true, there is no reason to suggest that these two groups of religious institutions would not be independent of one another. 
 
-3) **Observations are normally distributed.** 
+3) **Observations are normally distributed.** As is shown in the plot below (left), both of the response variables in question are *not* normally distributed; after log-transforming these responses, however, we see that their distirbution is symmetrical enough to satisfy this assumption. Of course, we do not need to seek perfect normality with respect to these distributions, since $t$-based statistical inference procedures are robust to this assumption (as was demonstrated in Question 5 in Problem Set 3).
 
 ```{r, eval=T}
 epsilon <- 1
 
-par(mfrow=c(1,2))
-hist(full.cases$total.cases, main="total.cases, untransformed")
-hist(log(full.cases$total.cases + epsilon), main="total.cases, log-transformed")
+par(mfrow=c(2,2))
+hist(full.cases$cases, main="2020 cases, untransformed", xlab="2020 cases")
+hist(log(full.cases$cases + epsilon), main="2020 cases, log-transformed", 
+     xlab="2020 cases")
+hist(full.cases$total.cases, main="total.cases, untransformed", 
+     xlab="total.cases")
+hist(log(full.cases$total.cases + epsilon), main="total.cases, log-transformed",
+     xlab="total.cases")
 ```
 
+The Normal Q-Q Plots below corroborate the conclusion that this assumption is reasonable. In each plot, the data for the most part follows the line that we would expect if it were perfectly normally distributed; although, since the data sits below the line at both the positive and negative extremes of the graph, the left tail is a bit fatter and the right tail a bit skinnier than the perfectly normal distribution in each of these sample distributions. 
+
 ```{r, eval=T}
-qqnorm(log(full.cases$total.cases + epsilon))
+par(mfrow=c(1,2))
+qqnorm(log(full.cases$cases + epsilon), main="Normal Q-Q Plot, 2020 cases")
+qqline(log(full.cases$cases + epsilon))
+qqnorm(log(full.cases$total.cases + epsilon), 
+       main="Normal Q-Q Plot, total.cases")
 qqline(log(full.cases$total.cases + epsilon))
 ```
 
 ## Student-$t$ Tests 
 
-State hypotheses, add note confirming the use of $\alpha = 0.05$ as our confidence level throughout the paper. 
+Now that we have shown the assumptions of Student-$t$ tests to be reasonable, we can proceed to perform the test itself. We perform two two-sided $t$-tests for a difference in means. In each case, the null hypothesis is that the true mean case counts in the two groups — religiously affiliated and non-religiously affiliated institutions — are equal over the given time period, and the alternative is that they are not equal. As in the rest of the paper, we will use the standard confidence level of $\alpha = 0.05$, for the sake of convenience and conformity. Below are the results from these tests. 
 
 ```{r, eval=T}
+t.test(log(cases + epsilon) ~ religious, data=full.cases)
 t.test(log(total.cases + epsilon) ~ religious, data=full.cases)
 ```
 
@@ -348,9 +360,9 @@ Interpret statistical significance
 ## ANOVA
 
 ```{r, eval=T}
-for.rel.affil <- full.cases[,c("total.cases", "religious.affiliation")]
+for.rel.affil <- full.cases[,c("cases", "religious.affiliation")]
 for.rel.affil <- for.rel.affil[complete.cases(for.rel.affil),]
-summary(aov(total.cases ~ religious.affiliation, data=for.rel.affil))
+summary(aov(cases ~ religious.affiliation, data=for.rel.affil))
 ```
 
 Shows that just breaking observations into religious vs. not religious (or catholic vs. not catholic) is much more informative than considering the specific religious affiliation of each school. 
@@ -360,8 +372,8 @@ Shows that just breaking observations into religious vs. not religious (or catho
 Motivations for non-parametric testing, and hypotheses 
 
 ```{r, eval=T}
-wilcox.test(x = full.cases$total.cases[full.cases$religious == "Yes"], 
-            y = full.cases$total.cases[full.cases$religious == "No"], 
+wilcox.test(x = full.cases$cases[full.cases$religious == "Yes"], 
+            y = full.cases$cases[full.cases$religious == "No"], 
             alternative='two.sided', exact = FALSE, correct = FALSE, 
             conf.int = TRUE)
 ```
@@ -463,7 +475,7 @@ abline(h=0, col="gray")
 
 In the above plot for the model for `total.cases`, the spread of the residuals is much more consistent across the entire range of fitted values. Though it is not entirely uniform, it would appear reasonable enough to operate under the assumption of homoskedasticity, especially given that, as was demonstrated in Problem Set 3, $t$-based statistical inference procedures done using linear models are fairly robust to slight violations in the assumption of homoskedasticity. 
 
-## Determining if data from 2020 or 2020 and 2021 should be used 
+## Determining whether data from 2020 or 2020 and 2021 should be used 
 
 Naturally, there is a temptation to forget about the case data for only 2020 and to focus on case data for the entire academic year (the entire time period during which case data was collected by the *New York Times*). There is one problem, however: While the *New York Times* was able to compile case data for all of the schools in our data set for the fall semester of that year, it was not able to find data for 297 schools for the spring semester. This is a nontrivial number of observations given that our data set only consists of 1855 different institutions; thus, to determine whether it would be sound to remove these 297 observations and fit models and perform statistical inferences on data from the entire academic year, we must determine whether the two groups of schools in question — those that reported data for the entire academic year, and those that did not — are sufficiently similar to one another. 
 
