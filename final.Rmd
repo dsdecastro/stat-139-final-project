@@ -281,10 +281,6 @@ After performing the data cleaning procedures outlined above, we are left with t
 
 * **hs.equivalent.degree**
 
-* **NCAA.football**
-
-* **percent.disability**
-
 * **on.campus.housing** 
 
 * **dorm.capacity**
@@ -563,33 +559,33 @@ Comments:
 - should we do a polynomial model? not possible with religous but something else?
 - What do you think of the explanations? Is there too much here? 
 
-Above we performed several linear regressions with no interactions and multiple predictors. Our "base model" includes all of the predictors we include in this paper, which are: `religious`, `tuition`, `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, `percent.pacific.islander`, `percent.white`, `percent.two.more.races`, `percent.women`, `grad.rate`, `percent.fin.aid`, `on.campus.housing`, `gap20repub`, `private`, `percent.student.loan`, `mask.mandated.days`, `occupational.degree` and `hs.equivelant.degree`. Above we discuss using 2020 cases, 2021 cases, or the total number of cases, concluding that we will use total cases for the remaining models. 
+Above we performed several linear regressions with no interactions and multiple predictors. Our "base model" includes all of the predictors we include in this paper, which are: `religious`, `tuition`, `total.headcount`, `percent.american.native`, `percent.asian`, `percent.black`, `percent.hispanic.latino`, `percent.pacific.islander`, `percent.white`, `percent.two.more.races`, `percent.women`, `grad.rate`, `percent.fin.aid`, `on.campus.housing`, `gap20repub`, `private`, `percent.student.loan`, `mask.mandated.days`, `occupational.degree` and `hs.equivelant.degree`. Above we discuss using 2020 cases, 2021 cases, or the total number of cases, concluding that we will use only 2020 cases for the remaining models. 
 
-We will now look at interaction effects and their significance in linear regression models for this dataset. First, we will look at a model with fewer predictors; including only `religious`, `total.headcount`, `grad.rate`, `percent.fin.aid`, `dorm.capacity`, and `gap20repub` to predict 2020 cases. We chose these variables because they are all different from one another and were statistically significant in predicting 2020 cases in a simple linear regression above. See `lm8` for the model with no interaction effects, `lm9` for interaction effects with the `religious` variables, and `lm10` for the all interaction effects between the variables in `lm8`: 
+We will now look at interaction effects and their significance in linear regression models for this dataset. First, we will look at a model with fewer predictors; including only `religious`, `total.headcount`, `grad.rate`, `percent.fin.aid`, `dorm.capacity`, and `gap20repub` to predict 2020 cases. We chose these variables because we anticipate there to not be a high degree of multicollinearity between them, and because they were statistically significant in predicting 2020 cases in a simple linear regression above. See `lm8` for the model with no interaction effects, `lm9` for interaction effects with the `religious` variables, and `lm10` for the all interaction effects between the variables in `lm8`: 
 
 ```{r}
 
-lm8 <- lm(log(total.cases + epsilon) ~ religious + log(total.headcount+epsilon) + 
+lm8 <- lm(log(cases + epsilon) ~ religious + log(total.headcount+epsilon) + 
             + percent.fin.aid + log(dorm.capacity+epsilon) + gap20repub, 
           data = full.cases)
             
 summary(lm8)
 
-lm9 <- lm(log(total.cases + epsilon) ~ (log(total.headcount+epsilon) + 
+lm9 <- lm(log(cases + epsilon) ~ (log(total.headcount+epsilon) + 
             + percent.fin.aid + log(dorm.capacity+epsilon) + gap20repub)*religious, 
           data = full.cases)
 
 summary(lm9)
 
 
-lm10 <- lm(log(total.cases + epsilon) ~ (religious + log(total.headcount+epsilon) + 
+lm10 <- lm(log(cases + epsilon) ~ (religious + log(total.headcount+epsilon) + 
             + percent.fin.aid + log(dorm.capacity+epsilon) + gap20repub)^2, 
           data = full.cases)
 
 summary(lm10)
 
 ```
-We see from the model without interaction effects that all chosen variables are statistically significant in predicting total cases in this specific model. Notably, the coefficient on "religiousYes" is positive and statistically significant, indicating that a school being religious predicts a higher number of cases than a non-religious institution. The interaction model with the variables from the previous models and their interactions with the religious variable has a slightly higher r-squared value than the model without interactions; `r summary(lm9)$r.squared`, versus `r summary(lm8)$r.squared`. 
+We see from the model without interaction effects that all chosen variables are statistically significant in predicting total cases in this specific model. Notably, the coefficient on `religiousYes` is positive and statistically significant, indicating that a school being religious predicts a higher number of cases than a non-religious institution. The interaction model with the variables from the previous models and their interactions with the religious variable has a slightly higher r-squared value than the model without interactions; `r summary(lm9)$r.squared`, versus `r summary(lm8)$r.squared`. 
 
 There was only one interaction effect that was statistically significant, that between `gap20repub` and `religious`. Even though `gap20repub` has a statistically significant positive effect when predicting cases across models when keeping `religious` constant (as one might expect; institutions in more republican states likely had fewer COVID-19 precautions, resulting in disproportionately higher cases), the relationship between `gap20repub` and `total.cases` is not quite as strong for institutions that are religious (though the coefficient is close to 0). This is statistically significant, with the negative interaction effect coefficient having a p-value of $0.00155$, which is significantly below the level $\alpha = 0.05$. 
 
@@ -608,16 +604,16 @@ From the ESS F-test, we see that there is evidence that the `religious` interact
 ```{r}
 religYes = (full.cases$religious == "Yes")
 
-plot(total.cases[religYes == TRUE] ~ gap20repub[religYes == TRUE],
+plot(cases[religYes == TRUE] ~ gap20repub[religYes == TRUE],
      data = full.cases,
      pch = 21, cex = 1.2, col=rgb(0,0.1,1,0.8),
      ylab = "total cases",xlab = "gap20repub",
      xlim = c(-90, 50), ylim = c(0,2000))
 points(full.cases$gap20repub[religYes == FALSE], 
-       full.cases$total.cases[religYes == FALSE],
+       full.cases$cases[religYes == FALSE],
        pch = 21,cex = 1.2,  col=rgb(1,0.1,0,0.3))
 
-abline(a = lm9$coef[1], b = lm9$coef[5], lty = 2, col = "royalblue4",
+abline(a = lm9$coef[1], b = lm9$coef[5], lty = 1, col = "royalblue4",
 lwd = 2)
 abline(a = lm9$coef[1]+lm9$coef[6], b = lm9$coef[5]+lm9$coef[10], lty = 2, col = "red",
 lwd = 2)
@@ -642,7 +638,7 @@ lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition +
 
 summary(lm7)$r.squared
 
-religiousInteraction <- lm(log(total.cases + epsilon) ~ religious *( tuition + 
+religiousInteraction <- lm(log(cases + epsilon) ~ religious*( tuition + 
             log(total.headcount+epsilon) + 
             log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
             log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
@@ -656,7 +652,7 @@ religiousInteraction <- lm(log(total.cases + epsilon) ~ religious *( tuition +
 summary(religiousInteraction)$r.squared
 #summary(religiousInteraction)
 
-fullInteraction <- lm(log(total.cases + epsilon) ~ (religious + tuition + 
+fullInteraction <- lm(log(cases + epsilon) ~ (religious + tuition + 
             log(total.headcount+epsilon) + 
             log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
             log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
@@ -676,12 +672,12 @@ RMSE <- function(y, yhat) {
 }
 
 # getting errors so maybe don't use?
-RMSE(full.cases$total.cases, predict(lm7, full.cases))
-RMSE(full.cases$total.cases, predict(lm8, full.cases))
-RMSE(full.cases$total.cases, predict(lm9, full.cases))
+RMSE(full.cases$cases, predict(lm6, full.cases))
+RMSE(full.cases$cases, predict(lm8, full.cases))
+RMSE(full.cases$cases, predict(lm9, full.cases))
 
 
-anova(lm7, religiousInteraction)
+anova(lm6, religiousInteraction)
 
 anova(religiousInteraction, fullInteraction)
 
@@ -698,7 +694,9 @@ anova(lm8, lm10)
 # In Search of a Parsimonious Model: Sequential Variable Selection Models
 
 ```{r, eval=F}
-df = full.cases[,c("gap20repub", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious","total.cases")]
+df = full.cases[,c("gap20repub", "mask.mandated.days", "private","tuition","total.headcount","undergrad.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.NA.race","percent.nonres.alien","percent.women","grad.rate","percent.fin.aid","percent.student.loan","NCAA.football","percent.disability","on.campus.housing","religious","total.cases")] 
+# I think we should drop NCAA.football as a predictor from our set 
+# With so many NA values, we also pretty much have to drop percent.disability
 
 df = na.omit(df)
 
