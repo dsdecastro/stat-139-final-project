@@ -554,7 +554,7 @@ data.frame(predictor=c("total.headcount", "tuition", "percent.fin.aid",
                      religious.test$p.value))
 ```
 
-THE TWO SAMPLES OF SCHOOLS ARE CLEARLY DIFFERNET WITH RESPECT TO CERTAIN PREDICTORS — INTERACTION EFFECTS MIGHT BE AT PLAY. WE SHOULD RESTRICT SAMPLE TO CASES IN 2020, AND EXPLORE INTERACTION EFFECTS
+The existence of these statistically significant differences between these two groups of institutions leads us to two distinct conclusions: Firstly, that we should perform all further analyses on data only from the fall 2020 semester, and secondly, that we should consider interaction effects in our model to help better isolate and take into account these demonstrated differences between these two different groups of institutions.  
 
 # Linear Models with Interaction Effects
 
