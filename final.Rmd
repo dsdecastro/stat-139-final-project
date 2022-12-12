@@ -721,16 +721,13 @@ forward.step2.terms <- attributes(forward.step2$terms)$term.labels
 both.step.terms <- attributes(both.step$terms)$term.labels
 ```
 
-COMMENT: I THINK MAYBE GIVING THE FORMULAS FOR EACH MODEL WOULD BE USEFUL FOR REFERENCE. WE ALSO SHOULD TRY TO INCLUDE SOME INFERENCE IN THIS SECTION — IN THESE MODELS, IS `religious` STATISTICALLY SIGNIFICANT? 
-
-
 # LASSO for Variable Section
 
 Because sequential variable selection can be sensitive to outliers and high-leverage observations, and in order to get a better idea of which of the three sequential variable selection models might be the most reliable, we will employ an alternative to this method: LASSO. A penalized form of regression, LASSO is able to function as a method of variable selection, since, unlike ridge regression, it actually does shrink coefficient estimates to exactly zero. 
 
 We will apply LASSO to both the `religiousInteraction` and `fullInteraction` models, and interpret the results of each model. In each case, we will use cross-validation to select the best regularizing constant $\lambda$ with which to fit each model. 
 
-First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction` — call this model LASSO Model 1 — and print the list of coefficients whose estimates were shrunk all the way to zero. 
+First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`; call this model LASSO Model 1. 
 
 ```{r, eval=T, fig.height=3}
 lambda.range <- 10^seq(-10, 3, 0.1)
@@ -740,13 +737,13 @@ plot(rI.cv)
 rI.lasso <- glmnet(model.matrix(religiousInteraction), df$cases,
                    lambda=rI.cv$lambda.min, alpha=1, trace=0)
 rI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(religiousInteraction)), beta=matrix(rI.lasso$beta)[,1])
-rI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
+# rI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
 
 rI.lasso.2 <- glmnet(model.matrix(religiousInteraction), df$cases,
                    lambda=lambda.range, alpha=1, trace=0)
 ```
 
-Clearly, the list is short — most of the predictors were not shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model, creating LASSO Model 2: 
+In LASSO Model 1, only the intercept estimate and the coefficient estimate for `religiousYes:percent.women` were shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model, creating LASSO Model 2: 
 
 ```{r, eval=T}
 fI.cv <- cv.glmnet(model.matrix(fullInteraction), df$cases, 
@@ -755,10 +752,10 @@ plot(fI.cv)
 fI.lasso <- glmnet(model.matrix(fullInteraction), df$cases,
                    lambda=fI.cv$lambda.min, alpha=1, trace=0)
 fI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(fullInteraction)), beta=matrix(fI.lasso$beta)[,1])
-fI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
+# fI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
 ```
 
-This time around, there are 11 coefficient estimates that were shrunk all the way to zero. 
+This time around, there are 11 coefficient estimates that were shrunk all the way to zero: `(Intercept)`, `religiousYes:percent.women`, `tuition:log(total.headcount + epsilon)`, `log(total.headcount + epsilon):privateYes`, `log(percent.american.native + epsilon):percent.two.more.races`, `log(percent.black + epsilon):percent.women`, `log(percent.hispanic.latino + epsilon):log(percent.pacific.islander + epsilon)`, `percent.white:gap20repub`, `percent.two.more.races:gap20repub`, `on.campus.housingYes:gap20repub`, `gap20repub:hs.equivalent.degreeYes`. 
 
 In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero in each of LASSO Models 1 and 2. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. Call the new linear models LASSO-Selected Linear Model 1 and LASSO-Selected Linear Model 2. 
 
