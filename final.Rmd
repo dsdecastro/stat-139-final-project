@@ -20,6 +20,8 @@ library(ggplot2)
 
 library(lemon)
 knit_print.data.frame <- lemon_print
+
+library(glmnet)
 ```
 
 ```{r, eval=T, include=F}
@@ -725,6 +727,81 @@ back.step <- step(model1, direction = "backward", k = 2)
 Honestly not sure how to interpret and forward step model and the both-directions step model take forever to run. 
 
 # LASSO for Variable Section
+
+Because sequential variable selection can be sensitive to outliers and high-leverage observations, and in order to get a better idea of which of the three sequential variable selection models might be the most reliable, we will employ an alternative to this method: LASSO. A penalized form of regression, LASSO is able to function as a method of variable selection, since, unlike ridge regression, it actually does shrink coefficient estimates to exactly zero. 
+
+We will apply LASSO to both the `religiousInteraction` and `fullInteraction` models, and interpret the results of each model. In each case, we will use cross-validation to select the best regularizing constant $\lambda$ with which to fit each model. 
+
+First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`, and print the list of coefficients whose estimates were shrunk all the way to zero. 
+
+```{r, eval=T, fig.height=3}
+interaction.df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
+interaction.df <- interaction.df[complete.cases(interaction.df),]
+
+lambda.range <- 10^seq(-10, 3, 0.1)
+rI.cv <- cv.glmnet(model.matrix(religiousInteraction), interaction.df$cases, 
+                   lambda=lambda.range, alpha=1, trace=0)
+plot(rI.cv)
+rI.lasso <- glmnet(model.matrix(religiousInteraction), interaction.df$cases,
+                   lambda=rI.cv$lambda.min, alpha=1, trace=0)
+rI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(religiousInteraction)), beta=matrix(rI.lasso$beta)[,1])
+rI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
+```
+
+Clearly, the list is short — most of the predictors were not shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model: 
+
+```{r, eval=T}
+fI.cv <- cv.glmnet(model.matrix(fullInteraction), interaction.df$cases, 
+                   lambda=lambda.range, alpha=1, trace=0)
+plot(fI.cv)
+fI.lasso <- glmnet(model.matrix(fullInteraction), interaction.df$cases,
+                   lambda=fI.cv$lambda.min, alpha=1, trace=0)
+fI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(fullInteraction)), beta=matrix(fI.lasso$beta)[,1])
+fI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
+```
+
+This time around, there are 11 coefficient estimates that were shrunk all the way to zero. 
+
+In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. We then list the coefficients that we find to be statistically significant. 
+
+```{r, eval=T}
+rI.lasso.remaining <- lm(log(cases + epsilon) ~ religious*(tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
+            on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree) -
+              religious:percent.women, data=full.cases)
+fI.lasso.remaining <- lm(log(cases + epsilon) ~ (religious + tuition + 
+            log(total.headcount+epsilon) + 
+            log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
+            log(percent.black+epsilon) + log(percent.hispanic.latino+epsilon) + 
+            log(percent.pacific.islander+epsilon) +
+            percent.white + percent.two.more.races + 
+            percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
+            on.campus.housing + gap20repub + 
+            private + percent.student.loan + mask.mandated.days +
+            occupational.degree + hs.equivalent.degree)^2 - 
+              religious:percent.women - tuition:log(total.headcount + epsilon) -
+              log(total.headcount + epsilon):private - 
+              log(percent.american.native + epsilon):percent.two.more.races -
+              log(percent.black + epsilon):percent.women - 
+              log(percent.hispanic.latino + epsilon):log(percent.pacific.islander +
+                                                           epsilon) -
+              percent.white:gap20repub - percent.two.more.races:gap20repub -
+              on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree,
+            data=full.cases)
+names(summary(rI.lasso.remaining)$coefficients[summary(rI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
+names(summary(fI.lasso.remaining)$coefficients[summary(fI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
+```
+
+In both cases, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
+
+Interestingly, while five different `religious` interaction coefficients are statistically significant in the first model, in the model based on the `fullInteraction` model, only one `religious` interaction coefficient is statistically significant: `religiousYes:mask.mandated.days`. Thus, while the first model suggests that whether a school has a religious affiliation affects the relationship between five other predictors and the case counts for the fall 2020 semester, the second suggests that only the association between `mask.mandated.days` and `cases` changes based on whether or not an institution has a religious affiliation. It appears that the interaction effects deemed to be statistically significant in the first model shared some level of collinearity with some of the interaction effects included in the second model. In this way, when these other interaction effects were included in the model, the `religious` interaction effects were no longer statistically significant, as the relationships that they helped to describe were better captured by other predictors.
 
 # Hierarchical Multi-level Models
 
