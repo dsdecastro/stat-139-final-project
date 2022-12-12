@@ -732,7 +732,7 @@ Because sequential variable selection can be sensitive to outliers and high-leve
 
 We will apply LASSO to both the `religiousInteraction` and `fullInteraction` models, and interpret the results of each model. In each case, we will use cross-validation to select the best regularizing constant $\lambda$ with which to fit each model. 
 
-First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`, and print the list of coefficients whose estimates were shrunk all the way to zero. 
+First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction` — call this model LASSO Model 1 — and print the list of coefficients whose estimates were shrunk all the way to zero. 
 
 ```{r, eval=T, fig.height=3}
 interaction.df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
@@ -746,9 +746,12 @@ rI.lasso <- glmnet(model.matrix(religiousInteraction), interaction.df$cases,
                    lambda=rI.cv$lambda.min, alpha=1, trace=0)
 rI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(religiousInteraction)), beta=matrix(rI.lasso$beta)[,1])
 rI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
+
+rI.lasso.2 <- glmnet(model.matrix(religiousInteraction), interaction.df$cases,
+                   lambda=lambda.range, alpha=1, trace=0)
 ```
 
-Clearly, the list is short — most of the predictors were not shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model: 
+Clearly, the list is short — most of the predictors were not shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model, creating LASSO Model 2: 
 
 ```{r, eval=T}
 fI.cv <- cv.glmnet(model.matrix(fullInteraction), interaction.df$cases, 
@@ -762,7 +765,7 @@ fI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
 
 This time around, there are 11 coefficient estimates that were shrunk all the way to zero. 
 
-In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. We then list the coefficients that we find to be statistically significant. 
+In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero in each of LASSO Models 1 and 2. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. Call the new linear models LASSO-Selected Linear Model 1 and LASSO-Selected Linear Model 2. We then list the coefficients that we find to be statistically significant. 
 
 ```{r, eval=T}
 rI.lasso.remaining <- lm(log(cases + epsilon) ~ religious*(tuition + 
@@ -776,6 +779,8 @@ rI.lasso.remaining <- lm(log(cases + epsilon) ~ religious*(tuition +
             private + percent.student.loan + mask.mandated.days +
             occupational.degree + hs.equivalent.degree) -
               religious:percent.women, data=full.cases)
+rI.stat.sig <- names(summary(rI.lasso.remaining)$coefficients[summary(rI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
+
 fI.lasso.remaining <- lm(log(cases + epsilon) ~ (religious + tuition + 
             log(total.headcount+epsilon) + 
             log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
@@ -795,13 +800,31 @@ fI.lasso.remaining <- lm(log(cases + epsilon) ~ (religious + tuition +
               percent.white:gap20repub - percent.two.more.races:gap20repub -
               on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree,
             data=full.cases)
-names(summary(rI.lasso.remaining)$coefficients[summary(rI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
-names(summary(fI.lasso.remaining)$coefficients[summary(fI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
+fI.stat.sig <- names(summary(fI.lasso.remaining)$coefficients[summary(fI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
 ```
 
-In both cases, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
+In both LASSO-Selected Linear Models 1 and 2, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
 
-Interestingly, while five different `religious` interaction coefficients are statistically significant in the first model, in the model based on the `fullInteraction` model, only one `religious` interaction coefficient is statistically significant: `religiousYes:mask.mandated.days`. Thus, while the first model suggests that whether a school has a religious affiliation affects the relationship between five other predictors and the case counts for the fall 2020 semester, the second suggests that only the association between `mask.mandated.days` and `cases` changes based on whether or not an institution has a religious affiliation. It appears that the interaction effects deemed to be statistically significant in the first model shared some level of collinearity with some of the interaction effects included in the second model. In this way, when these other interaction effects were included in the model, the `religious` interaction effects were no longer statistically significant, as the relationships that they helped to describe were better captured by other predictors.
+Interestingly, while five different `religious` interaction coefficients are statistically significant in LASSO-Selected Linear Model 1, only one `religious` interaction coefficient is statistically significant in LASSO-Selected Linear Model 2: `religiousYes:mask.mandated.days`. Thus, while the first model suggests that whether a school has a religious affiliation affects the relationship between five other predictors and the case counts for the fall 2020 semester, the second suggests that only the association between `mask.mandated.days` and `cases` changes based on whether or not an institution has a religious affiliation. It appears that the interaction effects deemed to be statistically significant in LASSO-Selected Linear Model 1 shared some level of collinearity with some of the interaction effects included in LASSO-Selected Linear Model 2. In this way, when these other interaction effects were included in the model, the `religious` interaction effects were no longer statistically significant, as the relationships that they helped to describe were better captured by other predictors. 
+
+The plot below demonstrates that there does indeed exist collinearity between the predictors of LASSO Model 2 (and thus LASSO-Selected Model 2). We have chosen to present this plot, because it is more readable than a printout of a massive variance-covariance matrix. This plot shows the trajectories of the coefficient estimates of LASSO Model 2 as the regularizing constant $\lambda$ increases on a logarithmic scale. As is clear, not all of the coefficient estimates are shrunk uniformly towards zero; instead, some display sharp increases in magnitude as $\lambda$ increases. This demonstrates that there is collinearity between some of the predictors: As one predictor in a collinear pair is shrunk to zero, the magnitude of the coefficient estimate for the other increases in order to make up for the lost predictive power. 
+
+```{r, eval=T, fig.height=4}
+fI.lasso.2 <- glmnet(model.matrix(fullInteraction), interaction.df$cases, 
+                   lambda=lambda.range, alpha=1, trace=0)
+betas <- fI.lasso.2$beta
+log_lam <- log(fI.lasso.2$lambda)
+plot(betas[1,] ~ log_lam, type="l", ylab=expression(beta), 
+     xlab=expression(log(lambda)), ylim=c(-150,150), 
+     main="LASSO Model 2: Coefficient Estimate Trajectories")
+for (i in 2:dim(betas)[1]) {
+  lines(betas[i,]~log_lam, lty=i, col=i)
+}
+```
+
+In the end, we lean towards accepting the conclusions presented by the second model: With a wider range of interaction effects to consider, it is less likely that the statistically significant predictors were only marked as such because they help explain a relationship between `cases` and another predictor with which they are collinear. 
+
+LASTLY, COMPARE LASSO RESULTS TO SEQUENTIAL VARIABLE SELECTION RESULTS
 
 # Hierarchical Multi-level Models
 
@@ -834,43 +857,3 @@ plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
 plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
 ```
 
-
-# Laura's work from before
-
-```{r, eval=F}
-# Not included in the below model: NCAA.football, religious.affiliation, 
-# mask.mandated days, as well as those subtracted from the formula of
-# the commented out lm1 below
-
-#full.cases$percent.cases <- full.cases$total.cases/full.cases$total.headcount
-
-summary(lm1 <- lm(log(total.cases + epsilon) ~ religious + catholic + 
-            tuition + total.headcount + 
-            undergrad.headcount + percent.american.native + percent.asian + 
-            percent.black + percent.hispanic.latino + percent.pacific.islander +
-            percent.white + percent.two.more.races + percent.NA.race + 
-            percent.nonres.alien + percent.women + grad.rate + percent.fin.aid + 
-            percent.disability + on.campus.housing + state + 
-            private + percent.student.loan + 
-            occupational.degree + hs.equivalent.degree, 
-          data=full.cases))
-
-summary(lm2 <- lm(log(total.cases + epsilon) ~ religious + private + tuition, full.cases))
-
-summary(lm3 <-lm(log(total.cases+epsilon)~(religious + tuition + percent.white+percent.black+mask.mandated.days)^2,full.cases))
-
-full.cases.tuit = full.cases[complete.cases(full.cases[,c("tuition")]),]
-
-lm5 = lm(total.cases ~ poly(tuition, 3, raw=TRUE), data = full.cases.tuit)
-summary(lm5)
-
-x=500:61500
-yhat = predict(lm5,new=data.frame(tuition=x))
-
-plot(total.cases~tuition,data=full.cases.tuit)
-lines(yhat~x,col="magenta",lwd=4)
-
-df = full.cases
-
-# avg.grant.money, dorm.capacity, dorm.room.price, academic.degree
-```
