@@ -765,7 +765,7 @@ fI.lasso.coef$coefficient[rI.lasso.coef$beta == 0]
 
 This time around, there are 11 coefficient estimates that were shrunk all the way to zero. 
 
-In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero in each of LASSO Models 1 and 2. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. Call the new linear models LASSO-Selected Linear Model 1 and LASSO-Selected Linear Model 2. We then list the coefficients that we find to be statistically significant. 
+In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero in each of LASSO Models 1 and 2. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. Call the new linear models LASSO-Selected Linear Model 1 and LASSO-Selected Linear Model 2. 
 
 ```{r, eval=T}
 rI.lasso.remaining <- lm(log(cases + epsilon) ~ religious*(tuition + 
@@ -803,6 +803,11 @@ fI.lasso.remaining <- lm(log(cases + epsilon) ~ (religious + tuition +
 fI.stat.sig <- names(summary(fI.lasso.remaining)$coefficients[summary(fI.lasso.remaining)$coefficients[,"Pr(>|t|)"] < 0.05,1])
 ```
 
+In LASSO-Selected Linear Model 1, we found the following coefficient estimates to be significant:
+`(Intercept)`, `religiousYes`, `tuition`,`log(total.headcount + epsilon)`, `log(percent.black + epsilon)`, `log(percent.pacific.islander + epsilon)`, `percent.white`, `percent.women`, `grad.rate`, `on.campus.housingYes`, `gap20repub`, `privateYes`, `percent.student.loan`, `religiousYes:log(percent.american.native + epsilon)`, `religiousYes:log(percent.black + epsilon)`, `religiousYes:grad.rate`, `religiousYes:on.campus.housingYes`, `religiousYes:mask.mandated.days`. 
+
+In LASSO-Selected Linear Model 2, we found the following coefficient estimates to be significant: `religiousYes`, `log(percent.black + epsilon)`, `on.campus.housingYes`, `religiousYes:mask.mandated.days`, `tuition:percent.two.more.races`, `tuition:grad.rate`, `tuition:percent.student.loan`, `log(total.headcount + epsilon):log(percent.black + epsilon)`, `log(total.headcount + epsilon):grad.rate`, `log(percent.american.native + epsilon):gap20repub`, `log(percent.american.native + epsilon):privateYes`, `log(percent.asian + epsilon):log(percent.pacific.islander + epsilon)`, `log(percent.asian + epsilon):gap20repub`, `log(percent.black + epsilon):gap20repub`, `log(percent.hispanic.latino + epsilon):percent.white`, `log(percent.hispanic.latino + epsilon):grad.rate`, `percent.white:on.campus.housingYes`, `percent.two.more.races:mask.mandated.days`, `percent.two.more.races:occupational.degreeYes`, `percent.women:log(100 - percent.fin.aid + epsilon)`, `percent.women:on.campus.housingYes`, `percent.women:gap20repub`, `percent.women:percent.student.loan`, `grad.rate:log(100 - percent.fin.aid + epsilon)`, `grad.rate:gap20repub`, `grad.rate:hs.equivalent.degreeYes`, `on.campus.housingYes:percent.student.loan`, `on.campus.housingYes:mask.mandated.days`, `on.campus.housingYes:occupational.degreeYes`, `on.campus.housingYes:hs.equivalent.degreeYes`, `percent.student.loan:hs.equivalent.degreeYes`.
+
 In both LASSO-Selected Linear Models 1 and 2, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
 
 Interestingly, while five different `religious` interaction coefficients are statistically significant in LASSO-Selected Linear Model 1, only one `religious` interaction coefficient is statistically significant in LASSO-Selected Linear Model 2: `religiousYes:mask.mandated.days`. Thus, while the first model suggests that whether a school has a religious affiliation affects the relationship between five other predictors and the case counts for the fall 2020 semester, the second suggests that only the association between `mask.mandated.days` and `cases` changes based on whether or not an institution has a religious affiliation. It appears that the interaction effects deemed to be statistically significant in LASSO-Selected Linear Model 1 shared some level of collinearity with some of the interaction effects included in LASSO-Selected Linear Model 2. In this way, when these other interaction effects were included in the model, the `religious` interaction effects were no longer statistically significant, as the relationships that they helped to describe were better captured by other predictors. 
@@ -815,7 +820,7 @@ fI.lasso.2 <- glmnet(model.matrix(fullInteraction), interaction.df$cases,
 betas <- fI.lasso.2$beta
 log_lam <- log(fI.lasso.2$lambda)
 plot(betas[1,] ~ log_lam, type="l", ylab=expression(beta), 
-     xlab=expression(log(lambda)), ylim=c(-150,150), 
+     xlab=expression(log(lambda)), ylim=c(-150,150), xlim=c(-7, max(log_lam)),
      main="LASSO Model 2: Coefficient Estimate Trajectories")
 for (i in 2:dim(betas)[1]) {
   lines(betas[i,]~log_lam, lty=i, col=i)
