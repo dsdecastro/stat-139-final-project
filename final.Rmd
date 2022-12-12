@@ -681,32 +681,32 @@ Backward stepwise is not the best for our circumstance because of collinearity; 
 
 Combined step has better AIC. 
 
-```{r, eval=F}
-df = full.cases[,c("gap20repub", "mask.mandated.days", "private","tuition","total.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.women","grad.rate","percent.fin.aid","percent.student.loan","on.campus.housing","religious","cases", "occupational.degree", "hs.equivalent.degree")] 
-df = na.omit(df) # this drops 150 rows
+```{r, eval=T}
+# A more convenient data frame to work with for future models 
+df <- full.cases[,c("gap20repub", "mask.mandated.days", "private","tuition","total.headcount","percent.american.native","percent.asian","percent.black","percent.hispanic.latino","percent.pacific.islander","percent.white","percent.two.more.races","percent.women","grad.rate","percent.fin.aid","percent.student.loan","on.campus.housing","religious","cases", "occupational.degree", "hs.equivalent.degree")] 
+df <- na.omit(df) # this drops 150 rows
+```
 
-back.step <- step(lm7, direction = "backward", k = 2)
+```{r, eval=T, cache=T}
+back.step <- step(fullInteraction, direction = "backward", k=2, trace=0)
 
-## including states, excluding days mandated:
-# removed columns are control, undergrad.headcount, percent.pacific.islander,on.campus.housing
+model0 <- lm(log(cases+epsilon) ~ 1, df)
 
-## including days mandated, excluding states:
-# removed columns are control, percent.american.native + percent.two.more.races+percent.NA.race,on.campus.housing+percent.disability
-model0 = lm(log(cases+epsilon) ~ 1, df)
+forward.step <- step(lm7, scope = list(upper = formula(fullInteraction)), 
+                     direction = "forward", k=2, trace=0)
+forward.step2 <- step(back.step, scope = list(upper = formula(fullInteraction)), 
+                      direction = "forward", k=2, trace=0)
+forward.step1 <- step(model0, scope = list(upper = formula(fullInteraction)), 
+                      direction = "forward", k=2, trace=0)
 
-forward.step = step(lm7, scope = list(upper = formula(fullInteraction)), direction = "forward")
-forward.step2 = step(back.step, scope = list(upper = formula(fullInteraction)), direction = "forward")
-forward.step1 = step(model0, scope = list(upper = formula(fullInteraction)), direction = "forward")
+both.step = step(lm7, scope = list(lower = formula(model0), upper = formula(fullInteraction)),
+            direction = "both", k=2, trace=0)
+```
 
-step = step(lm7, scope = list(lower = formula(model0), upper = formula(fullInteraction)),
-            direction = "both")
-
-AIC(forward.step)
-AIC(forward.step2)
-AIC(forward.step1)
-AIC(back.step)
-AIC(step)
-
+```{r, eval=T}
+step.models <- list(back.step, forward.step, forward.step1, forward.step2, both.step)
+lapply(step.models, FUN=AIC)
+lapply(step.models, FUN=formula)
 ```
 
 See above "analysis" ... not sure what else to say. Combined step includes religious, the others do not. 
