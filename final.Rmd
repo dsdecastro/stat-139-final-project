@@ -1,7 +1,7 @@
 ---
 title: "Characterizing the relationship between the religious affiliation and incidences of Covid-19 at U.S. universities."
 author: "Daniel de Castro and Laura Appleby"
-date: "December 13, 2022"
+date: "December 14, 2022"
 output: pdf_document
 ---
 
