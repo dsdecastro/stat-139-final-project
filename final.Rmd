@@ -729,7 +729,7 @@ We will apply LASSO to both the `religiousInteraction` and `fullInteraction` mod
 
 First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`; call this model LASSO Model 1. 
 
-```{r, eval=T, fig.height=3}
+```{r, eval=T, fig.height=4}
 lambda.range <- 10^seq(-10, 3, 0.1)
 rI.cv <- cv.glmnet(model.matrix(religiousInteraction), df$cases, 
                    lambda=lambda.range, alpha=1, trace=0)
@@ -745,7 +745,7 @@ rI.lasso.2 <- glmnet(model.matrix(religiousInteraction), df$cases,
 
 In LASSO Model 1, only the intercept estimate and the coefficient estimate for `religiousYes:percent.women` were shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model, creating LASSO Model 2: 
 
-```{r, eval=T}
+```{r, eval=T, fig.height=4}
 fI.cv <- cv.glmnet(model.matrix(fullInteraction), df$cases, 
                    lambda=lambda.range, alpha=1, trace=0)
 plot(fI.cv)
