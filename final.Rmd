@@ -944,6 +944,9 @@ General points to discuss:
 - 
 
 
+Note: make sure that interpretations of `religious` coefficients are consistent with the interpretation of the logarithmic transformation. 
+
+
 # Appendix A: Plots to Check the Assumption of Linearity
 
 ```{r, eval=T}
