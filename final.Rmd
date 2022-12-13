@@ -856,11 +856,7 @@ both.df
 
 Model Comparison and Discussion: 
 
-The results of the five step models explored come to very similar conclusions: though `religious` alone was sometimes included as a predictor and sometimes not, it was never statistically significant in the models. Conversely, five interactive terms stood out, specifically: `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes`, `religiousYes:tuition`, `religiousYes:log(percent.asian + epsilon)`, and `religiousYes:percent.two.more.races`. Three of these (`mask.mandated.days`, `on.campus.housing`, and `percent.asian`) were statistically significant in four of the models, and the remaining two were significant in three of those four. The fifth model, the forward interaction model starting from the intercept model, had no statistically significant interactive terms with `religious`. 
-
-Of these interactions, `mask.mandated.days` was always the most statistically significant with `religious`. Next was `on.campus.housing`, then typically `percent.asian`. This makes sense given that they appeared the most as significant in the models. 
-
-WHAT ARE THE SOCIAL REASONS FOR THIS? 
+The results of the five step models explored come to very similar conclusions: though `religious` alone was sometimes included as a predictor and sometimes not, it was never statistically significant in the models. Conversely, five interactive terms stood out, namely, `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes`, `religiousYes:tuition`, `religiousYes:log(percent.asian + epsilon)`, and `religiousYes:percent.two.more.races`. Three of these (`mask.mandated.days`, `on.campus.housing`, and `percent.asian`) were statistically significant in four of the models, and the remaining two were significant in three of those four. The fifth model, the forward interaction model starting from the intercept model, had no statistically significant interactive terms with `religious`. Of these interactions, `mask.mandated.days` was always the most statistically significant with `religious`. Next was `on.campus.housing`, then typically `percent.asian`. The significance of these interaction terms can be interpreted as an indication that the relationship between case counts and the religious affiliation of a school changes based on the values of these other predictors. 
 
 ```{r}
 aic.results = data.frame(c("Backward Step", "Forward (from base model)", "Forward (from backward model)", "Forward (from intercept model)", "Both Directions"), c(AIC(back.step), AIC(forward.step), AIC(forward.step2), AIC(forward.step1), AIC(both.step)))
@@ -1011,7 +1007,7 @@ In the end, we lean towards accepting the conclusions presented by the second mo
 
 # Hierarchical Multi-level Models
 
-We next chose to explore the relationship between 2020 Covid cases and our list of predictors using hierarchical multi-level models, namely the mixed effects models from the `lme4` package in R. We thought this model type would work well with our data because the data can be organized hierarchically.. The first level is at the University level; each university has predictors, such as `grad.rate` and `religious`, which are specific to each University. The second level in the hierarchy is the state level, where Universities in each specific state will share cultural, legislative, etc. characteristics that can be vaguely accounted for by sorting the "groups" by states. For example, mask mandates, which were decided by state, were in effect at that stage of the pandemic. Finally, these models have another advantageous capability of being able to account for "weight," meaning we can account for the affect `total.headcount` has on the number of Covid cases. 
+We next chose to explore the relationship between 2020 Covid cases and our list of predictors using hierarchical multi-level models, namely the mixed effects models from the `lme4` package in R. We thought this model type would work well with our data because the data can be organized hierarchically as follows: The first level is at the university level; each university has predictors, such as `grad.rate` and `religious`, which are specific to each university. The second level in the hierarchy is the state level, where Universities in each specific state will share cultural, legislative, etc. characteristics that can be vaguely accounted for by sorting the "groups" by states. For example, mask mandates, which were decided by state, were in effect at that stage of the pandemic. Finally, these models have another advantageous capability of being able to account for "weight," meaning we can account for the affect `total.headcount` has on the number of Covid cases. 
 
 A capability of the `lme4` mixed effects package is that it can produce both random intercept and random slope models. We decided that with the data we have, we can only look at random intercept mixed effects models. This is due to the number of observations we have; there are a total of 1855 Universities, which means that in each group (by state + Washington DC), there is an average of just over 36 data points per group. Especially given the differing densities of Universities (there are so many in Massachusetts), there are simply not enough observations per group to justify using and analyzing a random slope model. Fortunately, the nature of these mixed effects models means they will not overfit to the fewer observations in a given group.  
 
@@ -1045,13 +1041,13 @@ full.cases.col$col = with(
   
 
 plot(log(full.cases$percent.black+1), log(full.cases$cases+1), col = full.cases.col$col, ylim = c(0, 10), xlim = c(0,6))
-for (i in 1:length(ranef(er1)[[1]][,1])) {
-  intercept = ranef(er1)[[1]][i,1]
-  abline(fixef(er1)[1]+intercept, fixef(er1)[6], col = rgb(0,color_list[i], 1-color_list[i]/2, .6))
+for (i in 1:length(ranef(mer1)[[1]][,1])) {
+  intercept = ranef(mer1)[[1]][i,1]
+  abline(fixef(mer1)[1]+intercept, fixef(mer1)[6], col = rgb(0,color_list[i], 1-color_list[i]/2, .6))
 }
 
 ```
-The above plot explores  the relationship between `percent.black` and 2020 Covid cases in institutions, as well as plots the lines for each state (and DC) generated from our mixed effects (random intercept) model. We can see that the states have some spread in terms of differing intercepts. We can also see that, similar to the interaction models we explored, there is no significant visual relationship between religious institutions (red dots) and non-religious (blue dots) when comparing `percent.black` and `full.cases`. 
+The above plot explores the relationship between `percent.black` and 2020 Covid cases in institutions, as well as plots the lines for each state (and DC) generated from our mixed effects (random intercept) model. We can see that the states have some spread in terms of differing intercepts. We can also see that, similar to the interaction models we explored, there is no significant visual relationship between religious institutions (red dots) and non-religious (blue dots) when comparing `percent.black` and `full.cases`. 
 
 Next we explore the relationship between `gap20repub` and `religious` and their interactive effect on 2020 Covid cases grouped by state (still using mixed effects, random intercept). We are exploring this given the feature of the mixed effects models in exploring predictors at the second level of the heirarchical model (ie. the state-level). `gap20repub` is unique by state, but not by institutions in each state. We formally test below whether the effect of university religious affiliation (on 2020 Covid cases) depends on `gap20repub`:
 
@@ -1076,7 +1072,7 @@ for (i in 1:length(ranef(lmer3b)[[1]][,1])) {
 
 ```
 
-The result of the anova test between nested models mixed effects models (one with interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap2020repub`. Though this was not flagged as a particularly signifcant interaction in the above models, it is not surprising, perse; it is clear that the `religious` signiificantly interacts with many other predictors. 
+The result of the anova test between nested models mixed effects models (one with interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap2020repub`. Though this was not flagged as a particularly significant interaction in the above models, it is not surprising, per se: It is clear that the `religious` significantly interacts with many other predictors. 
 
 # Sensitivity Analysis using Poisson Regression
 
@@ -1107,11 +1103,6 @@ Clearly, there are still some outliers, which might be due to a number of factor
 We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. The tables below illustrates the results of these analyses. 
 
 ```{r, eval=T}
-modelsummary(list("base gaussian"=lm6, "weighted base poisson"=p2),
-             estimate="{estimate}", 
-             statistic="{p.value} {stars}",
-             shape=term ~ model + statistic, gof_omit="IC")
-
 cov.p2 <- vcovHC(p2, type="HC0")
 std.err <- sqrt(diag(cov.p2))
 r.est <- cbind(Estimate=coef(p2), "Robust SE" = std.err,
@@ -1130,13 +1121,6 @@ religiousInteraction.poisson <- glm(cases ~ religious *
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
     hs.equivalent.degree), data=full.cases, family="poisson", 
     weights=1/total.headcount)
-# plot(religiousInteraction.poisson, which=1)
-modelsummary(list("religiousInteraction gaussian"=religiousInteraction, 
-                  "weighted religiousInteraction poisson"=religiousInteraction.poisson),
-             estimate="{estimate}", 
-             statistic="{p.value} {stars}",
-             shape=term ~ model + statistic, gof_omit="IC", 
-             coef_omit="^(?!religious)")
 
 
 cov <- vcovHC(religiousInteraction.poisson, type="HC0")
@@ -1165,13 +1149,6 @@ fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcoun
     percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
     hs.equivalent.degree)^2, data=full.cases, family="poisson")
-
-modelsummary(list("fullInteraction gaussian"=fullInteraction, 
-                  "weighted fullInteraction poisson"=fullInteraction.poisson),
-             estimate="{estimate}", 
-             statistic="{p.value} {stars}",
-             shape=term ~ model + statistic, gof_omit="IC", 
-             coef_omit="^(?!religious)")
 
 cov <- vcovHC(religiousInteraction.poisson, type="HC0")
 std.err <- sqrt(diag(cov))
