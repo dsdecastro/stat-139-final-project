@@ -34,21 +34,21 @@ RMSE <- function(y, yhat) {
 
 # Introduction
 
-Paragraph expressing our motivations for pursuing this project, a brief analysis plan, and our hypotheses. 
+Although Covid-19 pandemic may feel like a thing of the past, there is still much research to do in order to understand its nascence, spread, and lasting health effects. Indeed, there is still much to do to ensure that we, as a society, are prepared to handle the next highly-transmissible pathogen that may arise. As university students whose first two years in school were far from normal on account of the Covid-19 pandemic — whose lives were dominated by case counts and triweekly testing — we are interested in exploring the development of the pandemic at colleges and universities across the United States. In particular, we are interested in the differences in how different academic institutions were affected by the pandemic. It has been well established that, at least in the United States, responses to the Covid-19 pandemic were tightly bound to political and ideological questions, the responses to which differ across the administrations of the wide range of universities in this country. In this paper, we will explore the differences in the impact of the pandemic between institutions with religious affiliations and those without religious affiliations. We will attempt to characterize the relationship between case counts during the fall and spring semesters of the 2020-21 academic year — the academic year in which responses to the pandemic were perhaps most varied across universities — and whether a university has a religious affiliation. We not only hope to answer the question of whether religious affiliation has a statistically significant relationship with case counts during the 2020-21 academic year — we also hope to discover the other characteristics of universities may have an effect on this relationship. To do so, we will employ a range of statistical inference procedures, from group testing to hierarchical multilevel models. 
 
 # Description of data and source
 
 Our data for this project comes from three sources: 
 
-1. [NYTimes Covid-19 Data](https://github.com/nytimes/covid-19-data/tree/master/colleges). This is publicly available on GitHub and was the source for some of the NYTimes maps and data visuals during the 2020-2021 era of the pandemic. It includes cases from 2020 - May 2021, and we have specifically selected cases at Universities. This dataset has 1948 entries and includes 2020 cases, 2021 cases, University IPEDS ID, University Name, State, etc. 
+1. [NYTimes Covid-19 Data](https://github.com/nytimes/covid-19-data/tree/master/colleges). This data set is publicly available on GitHub and was the source for various New York Times maps and visuals in its coverage of the pandemic. It includes case counts from July 2020 - May 2021, and we have specifically selected cases at Universities. This dataset has 1948 entries and includes 2020 cases, 2021 cases, University IPEDS ID, University Name, State, etc. 
 
-2. [IPEDS Data Center](https://nces.ed.gov/ipeds/use-the-data). This is publicly available data on colleges across the globe. It has many possible variables including demographics, admission rates, University affiliation, etc. The IPEDS data center allowed us to select certain Universities and variables. The smallest subset of Universities that included all from the NYTimes database (by IPEDS ID) was 6125 rows, with all US Universities. 
+2. [IPEDS Data Center](https://nces.ed.gov/ipeds/use-the-data). This is a publicly available data set on colleges and universities across the globe. It has many possible variables including demographics, admission rates, religious affiliation, etc. The IPEDS data center allowed us to select which variables to include in our data set. The smallest subset of universities that included all from the NYTimes database (by IPEDS ID) was 6125 rows, with all U.S. universities. 
 
 3. [Centers for Disease Control](https://data.cdc.gov/Policy-Surveillance/U-S-State-and-Territorial-Public-Mask-Mandates-Fro/tzyy-aayg). This publicly available data set tracks mask mandates in each state from April 8, 2020, to August 15, 2021. 
 
 4. The presidential elections data from STAT 139 Problem Set 4. Of this data set, we will be particularly focused on the `gap20repub` predictor, which we will use to help characterize the political climate of the state in which each institution is located.  
 
-The data has $n = 1,855$ rows after removing Universities without stats or without matching IPEDS ids.
+After removing universities that were missing lots of data in the pull from the IPEDS data center, we were left with $n = 1,855$ observations.
 
 # Data Cleaning Procedures
 
