@@ -234,79 +234,67 @@ write.csv(full.cases, "full_cases.csv")
 
 After performing the data cleaning procedures outlined above, we are left with the following ADJUST NUMBER! columns:
 
-* **ipeds_id** 
+* **ipeds_id** This is the IPEDS id, specific to each institution and a commonly used identifier for Universities, created by IPEDS. 
 
-* **institution.name**
+* **institution.name** This is the institution name, as filed by each University with IPEDS.
 
-* **state**    
+* **state** The state the University is in. This variable has state titles, not abbreviations or codes.    
 
-* **private**
+* **private** "A classification of whether an institution is operated by publicly elected or appointed officials or by privately elected or appointed officials and derives its major source of funds from private sources" [IPEDS]. This is simplified to an indicator: "Yes" for private, "No" for a public school.
 
-* **religious.affiliation**
+* **religious.affiliation** "Indicates religious affiliation (denomination) for private not-for-profit institutions that are religiously affiliated" [IPEDS]. 
 
-* **religious**
+* **religious** Indicator with "Yes" if the institution is religious, "No" if not. 
 
-* **catholic**
+* **catholic** Indicator with "Yes" if the institution is Catholic, "No" if not. 
 
-* **tuition**
+* **tuition** "Published tuition and fees, 2020-21 for academic year reporters only" [IPEDS].
 
-* **total.headcount**
+* **total.headcount** "12-month unduplicated headcount: 2020-21" [IPEDS].
 
-* **percent.american.native**
+* **percent.american.native** "Percent of 12-month unduplicated headcount that are American Indian or Alaska Native" [IPEDS].
 
-* **percent.asian**
+* **percent.asian** "Percent of 12-month unduplicated headcount that are Asian" [IPEDS].
 
-* **percent.black**
+* **percent.black** "Percent of 12-month unduplicated headcount that are Black" [IPEDS].
 
-* **percent.hispanic.latino** 
+* **percent.hispanic.latino** "Percent of 12-month unduplicated headcount that are Hispanic or Latino" [IPEDS]. 
 
-* **percent.pacific.islander**
+* **percent.pacific.islander** "Percent of 12-month unduplicated headcount that are Native Hawaiian or Other Pacific Islander" [IPEDS].
 
-* **percent.white**     
+* **percent.white** "Percent of 12-month unduplicated headcount that are White" [IPEDS].    
 
-* **percent.two.more.races**
+* **percent.two.more.races** "Percent of 12-month unduplicated headcount that are two or more races" [IPEDS].
 
-* **percent.NA.race**
+* **percent.NA.race** "Percent of 12-month unduplicated headcount that are race/ethnicity unknown" [IPEDS].
 
-* **percent.nonres.alien**
+* **percent.women** "Percent of 12-month unduplicated headcount that are women" [IPEDS].
 
-* **percent.women** 
+* **grad.rate** "Graduation rate of first-time, full-time degree or certificate-seeking students" [IPEDS].
 
-* **avg.grant.money**
+* **percent.fin.aid** "Percent of full-time first-time undergraduates awarded any financial aid" [IPEDS].
 
-* **grad.rate**
+* **percent.student.loan** "Percent of full-time first-time undergraduates awarded student loans" [IPEDS].
 
-* **percent.fin.aid** 
+* **occupational.degree** Indicator for if an occupational certificate, degree, or other formal award are offered at the institution.  
 
-* **percent.student.loan**
+* **hs.equivalent.degree** Indicator for if a highschool-equivelant certificate, degree, or other formal award are offered at the institution.  
 
-* **occupational.degree**
+* **on.campus.housing** Indicator for if on-campus housing is offered at the institution.  
 
-* **hs.equivalent.degree**
+* **dorm.capacity** "The maximum number of students that the institution can provide residential facilities for, whether on or off campus. (off-campus dormitory space that is reserved by the institution)" [IPEDS].
 
-* **on.campus.housing** 
+* **college** See `institution.name`
 
-* **dorm.capacity**
-
-* **city**
-
-* **college**
-
-* **cases**
+* **cases** 
 
 * **cases_2021**
 
-* **religious**   
+* **mask.mandated.days** 
 
-* **catholic**
+* **total.cases** 
 
-* **private**
-
-* **mask.mandated.days**
-
-* **total.cases**
-
-* **gap20repub**
+* **gap20repub** 
 
 
 # Group Testing
