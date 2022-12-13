@@ -1102,7 +1102,7 @@ Clearly, there are still some outliers, which might be due to a number of factor
 
 We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. The tables below illustrates the results of these analyses. 
 
-```{r, eval=T}
+```{r, eval=T, render=lemon_print}
 cov.p2 <- vcovHC(p2, type="HC0")
 std.err <- sqrt(diag(cov.p2))
 r.est <- cbind(Estimate=coef(p2), "Robust SE" = std.err,
@@ -1110,7 +1110,7 @@ r.est <- cbind(Estimate=coef(p2), "Robust SE" = std.err,
 r.est
 ```
 
-```{r, eval=T}
+```{r, eval=T, render=lemon_print}
 religiousInteraction.poisson <- glm(cases ~ religious * 
                                       (tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
@@ -1131,7 +1131,8 @@ r.est <- cbind(Estimate=coef(religiousInteraction.poisson), "Robust SE" = std.er
 significant_pval = c()
 significant_coeff = c()
 for (i in 1:length(r.est[,1])) {
-  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05) {
+  predictor_name = substr(rownames(r.est)[i], 1, 9)
+  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05 && predictor_name == "religious"){
     significant_coeff <- c(significant_coeff, rownames(r.est)[i])
     significant_pval <- c(significant_pval, r.est[i,3])
   }
@@ -1140,7 +1141,7 @@ data.frame(coefficients = significant_coeff,
            p.value = significant_pval)
 ```
 
-```{r, eval=T}
+```{r, eval=T, render=lemon_print}
 fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
     epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
@@ -1150,15 +1151,16 @@ fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcoun
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
     hs.equivalent.degree)^2, data=full.cases, family="poisson")
 
-cov <- vcovHC(religiousInteraction.poisson, type="HC0")
+cov <- vcovHC(fullInteraction.poisson, type="HC0")
 std.err <- sqrt(diag(cov))
-r.est <- cbind(Estimate=coef(religiousInteraction.poisson), "Robust SE" = std.err,
-"Pr(>|z|)" = 2 * pnorm(abs(coef(religiousInteraction.poisson)/std.err), lower.tail=FALSE))
+r.est <- cbind(Estimate=coef(fullInteraction.poisson)[-36], "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(fullInteraction.poisson)[-36]/std.err), lower.tail=FALSE))
 
 significant_pval = c()
 significant_coeff = c()
 for (i in 1:length(r.est[,1])) {
-  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05) {
+  predictor_name = substr(rownames(r.est)[i], 1, 9)
+  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05 && predictor_name == "religious"){
     significant_coeff <- c(significant_coeff, rownames(r.est)[i])
     significant_pval <- c(significant_pval, r.est[i,3])
   }
@@ -1167,7 +1169,7 @@ data.frame(coefficients = significant_coeff,
            p.value = significant_pval)
 ```
 
-```{r, eval=T}
+```{r, eval=T, render=lemon_print}
 fI.lr.poisson <- glm(cases ~ (religious + tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
     epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
@@ -1183,50 +1185,24 @@ fI.lr.poisson <- glm(cases ~ (religious + tuition + log(total.headcount +
     on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree, 
     data=full.cases, family="poisson", weights=1/total.headcount)
 
-modelsummary(list("gaussian"=fI.lasso.remaining, 
-                  "poisson"=fI.lr.poisson),
-             estimate="{estimate}", 
-             statistic="{p.value} {stars}",
-             shape=term ~ model + statistic, gof_omit="IC",
-             coef_omit="^(?!religious)")
+cov <- vcovHC(fI.lr.poisson, type="HC0")
+std.err <- sqrt(diag(cov))
+r.est <- cbind(Estimate=coef(fI.lr.poisson)[-35], "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(fI.lr.poisson)[-35]/std.err), lower.tail=FALSE))
 
-cov.fI.poisson <- vcovHC(fI.lr.poisson, type="HC0")
-std.err <- sqrt(diag(cov.fI.poisson))
-r.est <- cbind(Estimate= coef(fI.lr.poisson), "Robust SE" = std.err,
-"Pr(>|z|)" = 2 * pnorm(abs(coef(fI.lr.poisson)/std.err), lower.tail=FALSE),
-LL = coef(fI.lr.poisson) - 1.96 * std.err,
-UL = coef(fI.lr.poisson) + 1.96 * std.err)
-```
-
-```{r, eval=T}
-normalized.df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree", "state")]
-normalized.df$religious <- normalized.df$religious == "Yes"
-normalized.df$on.campus.housing <- normalized.df$on.campus.housing == "Yes"
-normalized.df$private <- normalized.df$private == "Yes"
-normalized.df$occupational.degree <- normalized.df$occupational.degree == "Yes"
-normalized.df$hs.equivalent.degree <- normalized.df$hs.equivalent.degree == "Yes"
-
-for (i in 1:length(colnames(normalized.df))) {
-  if (!is.factor(normalized.df[,i]) && colnames(normalized.df)[i] != "cases") {
-    normalized.df[,i] <- scale(normalized.df[,i])
+significant_pval = c()
+significant_coeff = c()
+for (i in 1:length(r.est[,1])) {
+  predictor_name = substr(rownames(r.est)[i], 1, 9)
+  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05 && predictor_name == "religious"){
+    significant_coeff <- c(significant_coeff, rownames(r.est)[i])
+    significant_pval <- c(significant_pval, r.est[i,3])
   }
 }
-
-random.offset <- glmer(cases ~ 1 + religious + (1|state) + offset(log(total.headcount)), 
-      data=normalized.df, family="poisson")
+data.frame(coefficients = significant_coeff,
+           p.value = significant_pval)
 ```
 
-```{r, eval=T}
-random.offset <- glmer(cases ~ 1 + religious + tuition + 
-      log(percent.american.native + epsilon) + log(percent.asian + 
-      epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
-      epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
-      percent.two.more.races + percent.women + grad.rate + log(100 - 
-      percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
-      private + percent.student.loan + mask.mandated.days + occupational.degree + 
-      hs.equivalent.degree + (1|state), 
-      data=normalized.df, family="poisson")
-```
 
 # Conclusions
 
@@ -1270,7 +1246,25 @@ plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
 
 
 
+# Daniel scratch work 
 
+```{r, eval=T}
+normalized.df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree", "state")]
+normalized.df$religious <- normalized.df$religious == "Yes"
+normalized.df$on.campus.housing <- normalized.df$on.campus.housing == "Yes"
+normalized.df$private <- normalized.df$private == "Yes"
+normalized.df$occupational.degree <- normalized.df$occupational.degree == "Yes"
+normalized.df$hs.equivalent.degree <- normalized.df$hs.equivalent.degree == "Yes"
+
+for (i in 1:length(colnames(normalized.df))) {
+  if (!is.factor(normalized.df[,i]) && colnames(normalized.df)[i] != "cases") {
+    normalized.df[,i] <- scale(normalized.df[,i])
+  }
+}
+
+random.offset <- glmer(cases ~ 1 + religious + (1|state) + offset(log(total.headcount)), 
+      data=normalized.df, family="poisson")
+```
 
 
 
