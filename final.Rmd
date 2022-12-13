@@ -427,7 +427,7 @@ plot(lm6$residuals ~ lm6$fitted.values, main="cases (2020)", xlab="fitted values
 abline(h=0, col="gray")
 ```
 
-As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. The behavior of this graph is interesting: Towards the left extreme of the graph, there appear to be bands of observations whose positions on this plot form negatively sloped lines. The left-most line corresponds to all those observations where the case counts are zero; the second-left-most line corresponds to the observations where the case counts are one; the next corresponds to the observations where the case count is two, etc. As one moves closer to the center of the plot, this patter disappears, and the plot assumes a form that is much better suited to linear regression. Thus, this problem arises from the fact that our response variable is discrete, and from the fact that we have so many observations with very low case counts. As it stands, we must be wary of this assumption of homoskedasticity. Later in the paper, we will perform a sensitivity analysis using Poisson regression to corroborate the results we obtain using Gaussian regression. 
+As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. The behavior of this graph is interesting: Towards the left extreme of the graph, there appear to be bands of observations whose positions on this plot form negatively sloped lines. The left-most line corresponds to all those observations where the case counts are zero; the second-left-most line corresponds to the observations where the case counts are one; the next corresponds to the observations where the case count is two, etc. As one moves closer to the center of the plot, this patter disappears, and the plot assumes a form that is much better suited to linear regression. Thus, this problem arises from the fact that our response variable is discrete, and from the fact that we have so many observations with very low case counts. As it stands, we must be wary of this assumption of homoskedasticity, which might affect the standard errors that we will use to calculate the statistical significance of coefficient estimates. Later in the paper, we will perform a sensitivity analysis using Poisson regression to corroborate the results we obtain using Gaussian regression. 
 
 Below, we recreate the same plot, but for the case counts for the entire 2020-21 academic year. 
 
@@ -547,6 +547,7 @@ significant_pval = c()
 significant_coeff = c()
 terms = c()
 
+count = 0
 for (i in 2:length(summary_pval)){
   if (summary_pval[i] < 0.05){
     significant_pval = c(significant_pval, summary_pval[i])
@@ -1072,6 +1073,103 @@ for (i in 1:length(ranef(lmer3b)[[1]][,1])) {
 ```
 
 The result of the anova test between nested models mixed effects models (one with interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap2020repub`. Though this was not flagged as a particularly signifcant interaction in the above models, it is not surprising, perse; it is clear that the `religious` signiificantly interacts with many other predictors. 
+
+# Sensitivity Analysis using Poisson Regression
+
+In "Checking the Assumptions of Linear Regression Models", we found behavior in our data set that calls into question the assumption of homoskedasticity that is used in all of the above methods, which are based on Gaussian regression. Because our response is count data, Poisson regression is an obvious candidate for improving the violation of this assumption. The first thing we do to verify this fact is to fit a Poisson regression model using the same formula as our base model from above; as the residuals versus fitted values plot below shows, Poisson regression does, for the most part, fix the intractable violations of homoskedasticity that we encountered with Gaussian regression. 
+
+```{r, eval=T, fig.height=4}
+p1 <- glm(cases ~ religious + tuition + log(total.headcount + 
+    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
+    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
+    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
+    percent.two.more.races + percent.women + grad.rate + log(100 - 
+    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
+    private + percent.student.loan + mask.mandated.days + occupational.degree + 
+    hs.equivalent.degree, data=full.cases, family="poisson")
+plot(p1, which=1)
+```
+
+With this model, however, the problem is not completely solved: Because the spread in the responses seems to increase as fitted values increase, it seems that weighted regression would be the best approach in the Poisson setting. The most obvious candidate for weights is the predictor `total.headcount` — it is reasonable to think that as school size increases, the differences approaches to handling the outbreak of Covid-19 might be manifested in increasingly different case count numbers. The below plot shows that employing weighted-least-squares Poisson regression using `1/total.headcount` as weights for the most part fixes the problem of heteroskedasticity. 
+
+```{r, eval=T, fig.height=4}
+p2 <- glm(formula(p1), data=full.cases, family="poisson", 
+          weights=1/total.headcount)
+plot(p2, which=1)
+```
+
+Clearly, there are still some outliers, which might be due to a number of factors, including exceptionally frequent testing, comprehensive Covid contact tracing systems, superspreader events on campus, or simply exceptionally large outbreaks on campus; however, the assumption of homoskedasticity now seems to be reasonable enough to trust our standard errors. 
+
+We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. The tables below illustrates the results of these analyses. 
+
+```{r, eval=T}
+modelsummary(list("base gaussian"=lm6, "weighted base poisson"=p2),
+             estimate="{estimate}", 
+             statistic="{p.value} {stars}",
+             shape=term ~ model + statistic, gof_omit="IC")
+```
+
+```{r, eval=T}
+religiousInteraction.poisson <- glm(cases ~ religious * 
+                                      (tuition + log(total.headcount + 
+    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
+    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
+    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
+    percent.two.more.races + percent.women + grad.rate + log(100 - 
+    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
+    private + percent.student.loan + mask.mandated.days + occupational.degree + 
+    hs.equivalent.degree), data=full.cases, family="poisson", 
+    weights=1/total.headcount)
+# plot(religiousInteraction.poisson, which=1)
+modelsummary(list("religiousInteraction gaussian"=religiousInteraction, 
+                  "weighted religiousInteraction poisson"=religiousInteraction.poisson),
+             estimate="{estimate}", 
+             statistic="{p.value} {stars}",
+             shape=term ~ model + statistic, gof_omit="IC", 
+             coef_omit="^(?!religious)")
+```
+
+```{r, eval=T}
+fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcount + 
+    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
+    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
+    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
+    percent.two.more.races + percent.women + grad.rate + log(100 - 
+    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
+    private + percent.student.loan + mask.mandated.days + occupational.degree + 
+    hs.equivalent.degree)^2, data=full.cases, family="poisson")
+
+modelsummary(list("fullInteraction gaussian"=fullInteraction, 
+                  "weighted fullInteraction poisson"=fullInteraction.poisson),
+             estimate="{estimate}", 
+             statistic="{p.value} {stars}",
+             shape=term ~ model + statistic, gof_omit="IC", 
+             coef_omit="^(?!religious)")
+```
+
+```{r, eval=T}
+fI.lr.poisson <- glm(cases ~ (religious + tuition + log(total.headcount + 
+    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
+    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
+    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
+    percent.two.more.races + percent.women + grad.rate + log(100 - 
+    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
+    private + percent.student.loan + mask.mandated.days + occupational.degree + 
+    hs.equivalent.degree)^2 - religious:percent.women - tuition:log(total.headcount + 
+    epsilon) - log(total.headcount + epsilon):private - log(percent.american.native + 
+    epsilon):percent.two.more.races - log(percent.black + epsilon):percent.women - 
+    log(percent.hispanic.latino + epsilon):log(percent.pacific.islander + 
+        epsilon) - percent.white:gap20repub - percent.two.more.races:gap20repub - 
+    on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree, 
+    data=full.cases, family="poisson", weights=1/total.headcount)
+
+modelsummary(list("gaussian"=fI.lasso.remaining, 
+                  "poisson"=fI.lr.poisson),
+             estimate="{estimate}", 
+             statistic="{p.value} {stars}",
+             shape=term ~ model + statistic, gof_omit="IC", 
+             coef_omit="^(?!religious)")
+```
 
 # Conclusions
 
