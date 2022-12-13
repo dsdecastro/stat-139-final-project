@@ -114,7 +114,7 @@ ipeds <- ipeds %>% rename_at('IC2021.Institutional.control.or.affiliation',
                               ~'dorm.room.price')
 ```
 
-Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious`, `catholic`, and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop any unnecessary or redundant columns from the data frame.
+Next, we merge the `colleges` and `ipeds` data frames on the `ipeds_id` column and remove institutions with no IPEDS data. We then create the `religious` and `private` columns, which are simply indicators for whether an institution has any religious affiliation, whether it has a catholic affiliation, and whether it is a private university. Finally, we drop any unnecessary or redundant columns from the data frame.
 
 ```{r, eval=T, echo = FALSE}
 # Merge data frames, and remove duplicated "state" column 
@@ -493,7 +493,7 @@ modelsummary(list("all schools"=lm6,
 
 As we can see, when the sample of the institutions used to fit the model changes, some of the coefficient estimates change vastly. Take, for example, the coefficient estimate for `religionYes`, which can be interpreted as the change in cases that we would expect if a given school were to have a religious affiliation rather than not have one. This coefficient estimate is not statistically significant when all institutions are considered together, is positive and statistically significant when the institutions that reported data for the entire academic year are considered, and negative and statistically significant when the institutions that only reported data for the fall are considered. In fact, if one were to inspect the table above, they would notice that the majority of predictors included in this baseline models experienced changes in coefficient estimates and statistical significance as the sample of institutions considered was changed.  
 
-Clearly, then, there are some underlying differences between the schools that did and the schools that did not report case data for the spring semester of the 2020-21 academic year. Consider, the coefficient estimate for `religiousYes`, which represents the change in the number of `cases` that we would expect given that a school were to be religiously affiliated, with all other predictors held constant. The coefficient estimate for `religiousYes` is quite different in the two models fit to data from only one of the two subgroups, which is especially interesting for our research purposes. Indeed, searching for the differences between these subgroups in terms of `religious` and other predictors might help us to answer the questions about the association between religious affiliation and reported Covid cases that are motivating this paper. 
+Clearly, then, there are some underlying differences between the schools that did and the schools that did not report case data for the spring semester of the 2020-21 academic year. Consider, the coefficient estimate for `religiousYes`, which represents the natural logarithm of the multiplicative change in the number of `cases` that we would expect given that a school were to be religiously affiliated, with all other predictors held constant. The coefficient estimate for `religiousYes` is quite different in the two models fit to data from only one of the two subgroups, which is especially interesting for our research purposes. Indeed, searching for the differences between these subgroups in terms of `religious` and other predictors might help us to answer the questions about the association between religious affiliation and reported Covid cases that are motivating this paper. 
 
 First, we investigate the difference in the political leanings of the states in which these schools were located, as given by `gap20repub`. To do so, we perform a $t$-test (the assumptions that allow us to do so have been explored above), with the null hypothesis being that the true means `gap20repub` are equal between the two groups of institutions, and the alternative being that the true means are different. The result of this test is shown below. 
 
@@ -758,11 +758,6 @@ Of course, both `religiousInteraction` and `fullInteraction` are large, complica
 
 - Forward step 1: For this model, we stepped forward from an intercept model. As a result, `forward.step1` incorporated 67 predictors. Rather tellingly, this list of predictors did not include `religiousYes`, or any interaction term with `religious`. This could be taken as evidence that `religious` really is not a relevant predictor at all. 
 
-<!-- I honestly think we should either elaborate on Forward step 1. or not include it at all? -->
-
-<!-- How is that? -->
-
-
 - Bidirectional step: For this model, we used our base model as our starting point, and stepped in both directions (alternating forwards and backwards), until an improvement in AIC was no longer possible. As a result, 55 predictors were added to the base model to produce `both.step`, a model with 75 total predictors. This list of predictors for this model was extremely similar to the list of predictors included in the `forward.step` model; only four predictors were different between the two models, none of which were related to `religious`. Predictably, the same interaction terms with `religious` that were significant in `forward.step` were statistically significant in this model as well, and `religiousYes` was again not statistically significant. This model corroborates the idea that whether an institution is religious changes the relationship between `cases` and these other predictors, but that there is no relationship between the predictor `religious` and the response `cases`.  
 
 Backward stepwise is not the best for our circumstance because of collinearity; backward stepwise might be forced to keep collinear variables because it starts with them, whereas forward stepwise can entirely omit them from the procedure. GREAT THOUGHT, CAN YOU EXPAND ON THIS?
@@ -884,9 +879,9 @@ In LASSO-Selected Linear Model 1, we found the following coefficient estimates t
 
 In LASSO-Selected Linear Model 2, we found the following coefficient estimates to be statistically significant: `religiousYes`, `log(percent.black + epsilon)`, `on.campus.housingYes`, `religiousYes:mask.mandated.days`, `tuition:percent.two.more.races`, `tuition:grad.rate`, `tuition:percent.student.loan`, `log(total.headcount + epsilon):log(percent.black + epsilon)`, `log(total.headcount + epsilon):grad.rate`, `log(percent.american.native + epsilon):gap20repub`, `log(percent.american.native + epsilon):privateYes`, `log(percent.asian + epsilon):log(percent.pacific.islander + epsilon)`, `log(percent.asian + epsilon):gap20repub`, `log(percent.black + epsilon):gap20repub`, `log(percent.hispanic.latino + epsilon):percent.white`, `log(percent.hispanic.latino + epsilon):grad.rate`, `percent.white:on.campus.housingYes`, `percent.two.more.races:mask.mandated.days`, `percent.two.more.races:occupational.degreeYes`, `percent.women:log(100 - percent.fin.aid + epsilon)`, `percent.women:on.campus.housingYes`, `percent.women:gap20repub`, `percent.women:percent.student.loan`, `grad.rate:log(100 - percent.fin.aid + epsilon)`, `grad.rate:gap20repub`, `grad.rate:hs.equivalent.degreeYes`, `on.campus.housingYes:percent.student.loan`, `on.campus.housingYes:mask.mandated.days`, `on.campus.housingYes:occupational.degreeYes`, `on.campus.housingYes:hs.equivalent.degreeYes`, `percent.student.loan:hs.equivalent.degreeYes`.
 
-In both LASSO-Selected Linear Models 1 and 2, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
+In both LASSO-Selected Linear Models 1 and 2, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the natural logarithm of the multiplicative change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
 
-Interestingly, while five different `religious` interaction coefficients are statistically significant in LASSO-Selected Linear Model 1, only one `religious` interaction coefficient is statistically significant in LASSO-Selected Linear Model 2: `religiousYes:mask.mandated.days`. Thus, while the first model suggests that the relationship between `religious` and `cases` is affected by hte value of five other predictors in the model, the second suggests that the association between `religious` and `cases` changes based on the value of `mask.mandated.days` of a given observation. It appears that the interaction effects deemed to be statistically significant in LASSO-Selected Linear Model 1 shared some level of collinearity with some of the additional interaction effects that were included in LASSO-Selected Linear Model 2. In this way, when these other interaction effects were included in the model, the `religious` interaction effects were no longer statistically significant, as the relationships that they helped to describe were better captured by other predictors. 
+Interestingly, while five different `religious` interaction coefficients are statistically significant in LASSO-Selected Linear Model 1, only one `religious` interaction coefficient is statistically significant in LASSO-Selected Linear Model 2: `religiousYes:mask.mandated.days`. Thus, while the first model suggests that the relationship between `religious` and `cases` is affected by the value of five other predictors in the model, the second suggests that the association between `religious` and `cases` changes based on the value of `mask.mandated.days` of a given observation. It appears that the interaction effects deemed to be statistically significant in LASSO-Selected Linear Model 1 shared some level of collinearity with some of the additional interaction effects that were included in LASSO-Selected Linear Model 2. In this way, when these other interaction effects were included in the model, the `religious` interaction effects were no longer statistically significant, as the relationships that they helped to describe were better captured by other predictors. 
 
 The plot below demonstrates that there does indeed exist collinearity between the predictors of LASSO Model 2 (and thus LASSO-Selected Model 2). We have chosen to present this plot, because it is more readable than a printout of a massive variance-covariance matrix. This plot shows the trajectories of the coefficient estimates of LASSO Model 2 as the regularizing constant $\lambda$ increases on a logarithmic scale. As is clear, not all of the coefficient estimates are shrunk uniformly towards zero; instead, some display sharp increases in magnitude as $\lambda$ increases. This demonstrates that there is collinearity between some of the predictors: As one predictor in a collinear pair is shrunk to zero, the magnitude of the coefficient estimate for the other increases in order to make up for the lost predictive power. 
 
@@ -903,9 +898,7 @@ for (i in 2:dim(betas)[1]) {
 }
 ```
 
-In the end, we lean towards accepting the conclusions presented by the second model: With a wider range of interaction effects to consider, it is less likely that the statistically significant predictors were only marked as such because they help explain a relationship between `cases` and another predictor with which they are collinear. 
-
-LASTLY, COMPARE LASSO RESULTS TO SEQUENTIAL VARIABLE SELECTION RESULTS
+In the end, we lean towards accepting the conclusions presented by the second model: With a wider range of interaction effects to consider, it is less likely that the statistically significant predictors were only marked as such because they help explain a relationship between `cases` and another predictor with which they are collinear. The conclusion of the LASSO models alone appears to be that there is a statistically significant relationship between `religious` and `cases`, and that the nature of this relationship changes based on the value of `mask.mandated.days`. Interestingly, in LASSO-Selected Model 2, the interaction coefficient `religiousYes:mask.mandated.days` has a positive coefficient: An increase in the number of mask mandated days during the 2020-21 academic year is associated, in this model, with an increase in the multiplicative change that we would expect for a given school if that school were to have a religious affiliation, compared to if that same school were to not have a religious affiliation. This phenomenon also seems to be present in LASSO-Selected Model 1, in which the coefficient estimate for `religious:mask.mandated.days` is also positive. 
 
 # Hierarchical Multi-level Models
 
@@ -938,14 +931,14 @@ df2 = data.frame(state.df$total.headcount, predict(lmer2, state.df))
 
 General points to discuss: 
 
-- General correlation of religious with cases, brief overview of the 2020, 2021, total.cases decision
+- Brief summary of first three sections: Group Testing, Assumptions, 2020/21/total.cases decision
 - Linear model recap, determining the significance of `religious` relies a lot on its interactions 
 - AIC step comes to similar conclusions? 
-- 
 
-
-Note: make sure that interpretations of `religious` coefficients are consistent with the interpretation of the logarithmic transformation. 
-
+Discussing inferences: 
+- Which coefficients related to `religious` (linear and interaction effects) did we find to be significant at each stage of our analyses? 
+- Where the findings differ, which models do we choose to give more credit to? Which findings are we more confident in (based on number of models that support the significance of a predictor)? 
+- Giving the interpretation of every predictor that is discussed? 
 
 # Appendix A: Plots to Check the Assumption of Linearity
 
