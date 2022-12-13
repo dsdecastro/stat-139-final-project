@@ -427,9 +427,7 @@ plot(lm6$residuals ~ lm6$fitted.values, main="cases (2020)", xlab="fitted values
 abline(h=0, col="gray")
 ```
 
-As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. The behavior of this graph is interesting: Towards the left extreme of the graph, there appear to be bands of observations whose positions on this plot form negatively sloped lines. The left-most line corresponds to all those observations where the case counts are zero; the second-left-most line corresponds to the observations where the case counts are one; the next corresponds to the observations where the case count is two, etc. As one moves closer to the center of the plot, this patter disappears, and the plot assumes a form that is much better suited to linear regression. 
-
-Thus, this problem arises from the fact that our response variable is discrete, and from the fact that we have so many observations with very low case counts. As it stands, we are not in a position to accept the assumption of homoskedasticity. As we use techniques based on Gaussian regression to explore the association between the religious affiliation of a school and its reported case counts, we must therefore use heteroskedastic-consistent standard errors. Later in this paper, we will also employ the techniques of Poisson regression, which should solve the problem with this assumption. 
+As is shown in the plot above, the spread of the residuals is not constant across the entire range of fitted values — thus, it is called into question whether the assumption of homoskedasticity is reasonable in this case. The behavior of this graph is interesting: Towards the left extreme of the graph, there appear to be bands of observations whose positions on this plot form negatively sloped lines. The left-most line corresponds to all those observations where the case counts are zero; the second-left-most line corresponds to the observations where the case counts are one; the next corresponds to the observations where the case count is two, etc. As one moves closer to the center of the plot, this patter disappears, and the plot assumes a form that is much better suited to linear regression. Thus, this problem arises from the fact that our response variable is discrete, and from the fact that we have so many observations with very low case counts. As it stands, we must be wary of this assumption of homoskedasticity. Later in the paper, we will perform a sensitivity analysis using Poisson regression to corroborate the results we obtain using Gaussian regression. 
 
 Below, we recreate the same plot, but for the case counts for the entire 2020-21 academic year. 
 
@@ -1028,7 +1026,6 @@ mer1 = lmer(log(cases + 1) ~ 1 + religious + tuition +
 weights=total.headcount/1000, REML=FALSE)
 
 plot_model(mer1)
-
 ```
 We see in the above model that certain coefficent estimates are significantly larger than the others. It is significant to note that `religiousYes` actualy has a negative affect on the 2020 Covid cases in this model, which is contrary to all previous models we have explored. 
 
@@ -1115,20 +1112,6 @@ plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
 plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
 ```
 
-
-# Daniel's Scratch-work 
-
-SOME EXPERIMENTING WITH MIXED-EFFECTS MODELS 
-```{r, eval=T}
-lmer.test <- lmer(log(cases + epsilon) ~ religious + tuition + log(total.headcount + 
-    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
-    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
-    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
-    percent.two.more.races + percent.women + grad.rate + log(100 - 
-    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
-    private + percent.student.loan + mask.mandated.days + occupational.degree + 
-    hs.equivalent.degree + (1|state), data=full.cases)
-```
 
 
 
