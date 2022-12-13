@@ -867,6 +867,7 @@ aic.results = data.frame(c("Backward Step", "Forward (from base model)", "Forwar
 colnames(aic.results) = c("Model", "AIC")
 aic.results
 ```
+
 We see in the above table that the models with the lowest AIC (this indicates a "better" model) is the Backward Step model and the Forward (from the backward model). These are the same models, as discussed above, as the forward procedure did not add any variables to the starting backward model. Notably, these included all five discussed interactive terms with `religious`. Conversely, the model with the greatest AIC was the Forward direction model starting from the intercept model. This was the model without the `religious` interaction terms. 
 
 We thought that the backward step model may be the worst for our data due to the high collinearity, as the procedure would force the model to consider and keep collinear variables because it starts with them. Conversely, a forward stepwise model could entirely omit them from the procedure. While the run time for the backward step model was the greatest and is indicative of considering so many interactive terms, it has a higher AIC and does not seem to differ much with variable significance from other step models we considered. 
@@ -880,6 +881,9 @@ We will apply LASSO to both the `religiousInteraction` and `fullInteraction` mod
 First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`; call this model LASSO Model 1. 
 
 ```{r, eval=T, fig.height=4}
+df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
+df <- df[complete.cases(df),]
+
 lambda.range <- 10^seq(-10, 3, 0.1)
 rI.cv <- cv.glmnet(model.matrix(religiousInteraction), df$cases, 
                    lambda=lambda.range, alpha=1, trace=0)
@@ -1024,7 +1028,7 @@ mer1 = lmer(log(cases + 1) ~ 1 + religious + tuition +
     percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
     hs.equivalent.degree + (1|state), data=full.cases,
-weights=total.headcount/1000, REML=FALSE)
+    weights=total.headcount/1000, REML=FALSE)
 
 plot_model(mer1)
 ```
@@ -1107,6 +1111,12 @@ modelsummary(list("base gaussian"=lm6, "weighted base poisson"=p2),
              estimate="{estimate}", 
              statistic="{p.value} {stars}",
              shape=term ~ model + statistic, gof_omit="IC")
+
+cov.p2 <- vcovHC(p2, type="HC0")
+std.err <- sqrt(diag(cov.p2))
+r.est <- cbind(Estimate=coef(p2), "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(p2)/std.err), lower.tail=FALSE))
+r.est
 ```
 
 ```{r, eval=T}
@@ -1127,6 +1137,23 @@ modelsummary(list("religiousInteraction gaussian"=religiousInteraction,
              statistic="{p.value} {stars}",
              shape=term ~ model + statistic, gof_omit="IC", 
              coef_omit="^(?!religious)")
+
+
+cov <- vcovHC(religiousInteraction.poisson, type="HC0")
+std.err <- sqrt(diag(cov))
+r.est <- cbind(Estimate=coef(religiousInteraction.poisson), "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(religiousInteraction.poisson)/std.err), lower.tail=FALSE))
+
+significant_pval = c()
+significant_coeff = c()
+for (i in 1:length(r.est[,1])) {
+  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05) {
+    significant_coeff <- c(significant_coeff, rownames(r.est)[i])
+    significant_pval <- c(significant_pval, r.est[i,3])
+  }
+}
+data.frame(coefficients = significant_coeff,
+           p.value = significant_pval)
 ```
 
 ```{r, eval=T}
@@ -1145,6 +1172,22 @@ modelsummary(list("fullInteraction gaussian"=fullInteraction,
              statistic="{p.value} {stars}",
              shape=term ~ model + statistic, gof_omit="IC", 
              coef_omit="^(?!religious)")
+
+cov <- vcovHC(religiousInteraction.poisson, type="HC0")
+std.err <- sqrt(diag(cov))
+r.est <- cbind(Estimate=coef(religiousInteraction.poisson), "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(religiousInteraction.poisson)/std.err), lower.tail=FALSE))
+
+significant_pval = c()
+significant_coeff = c()
+for (i in 1:length(r.est[,1])) {
+  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05) {
+    significant_coeff <- c(significant_coeff, rownames(r.est)[i])
+    significant_pval <- c(significant_pval, r.est[i,3])
+  }
+}
+data.frame(coefficients = significant_coeff,
+           p.value = significant_pval)
 ```
 
 ```{r, eval=T}
@@ -1167,8 +1210,45 @@ modelsummary(list("gaussian"=fI.lasso.remaining,
                   "poisson"=fI.lr.poisson),
              estimate="{estimate}", 
              statistic="{p.value} {stars}",
-             shape=term ~ model + statistic, gof_omit="IC", 
+             shape=term ~ model + statistic, gof_omit="IC",
              coef_omit="^(?!religious)")
+
+cov.fI.poisson <- vcovHC(fI.lr.poisson, type="HC0")
+std.err <- sqrt(diag(cov.fI.poisson))
+r.est <- cbind(Estimate= coef(fI.lr.poisson), "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(fI.lr.poisson)/std.err), lower.tail=FALSE),
+LL = coef(fI.lr.poisson) - 1.96 * std.err,
+UL = coef(fI.lr.poisson) + 1.96 * std.err)
+```
+
+```{r, eval=T}
+normalized.df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree", "state")]
+normalized.df$religious <- normalized.df$religious == "Yes"
+normalized.df$on.campus.housing <- normalized.df$on.campus.housing == "Yes"
+normalized.df$private <- normalized.df$private == "Yes"
+normalized.df$occupational.degree <- normalized.df$occupational.degree == "Yes"
+normalized.df$hs.equivalent.degree <- normalized.df$hs.equivalent.degree == "Yes"
+
+for (i in 1:length(colnames(normalized.df))) {
+  if (!is.factor(normalized.df[,i]) && colnames(normalized.df)[i] != "cases") {
+    normalized.df[,i] <- scale(normalized.df[,i])
+  }
+}
+
+random.offset <- glmer(cases ~ 1 + religious + (1|state) + offset(log(total.headcount)), 
+      data=normalized.df, family="poisson")
+```
+
+```{r, eval=T}
+random.offset <- glmer(cases ~ 1 + religious + tuition + 
+      log(percent.american.native + epsilon) + log(percent.asian + 
+      epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
+      epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
+      percent.two.more.races + percent.women + grad.rate + log(100 - 
+      percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
+      private + percent.student.loan + mask.mandated.days + occupational.degree + 
+      hs.equivalent.degree + (1|state), 
+      data=normalized.df, family="poisson")
 ```
 
 # Conclusions
