@@ -1302,6 +1302,8 @@ merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
 
 Of the three `religious` interaction effects that were determined to be statistically significant in the Gaussian `back.step` model, only two remained statistically significant in the Poisson regression recreation of this model: `religiousYes:mask.mandated.days` and `religiousYes:on.campus.housingYes`. `religiousYes:log(percent.asian + epsilon)` was not statistically significant in the Poisson model. 
 
+Overall, we have observed that most of the coefficients that were marked as statistically significant in the Gaussian models fit earlier in the paper remained statistically significant under the assumptions of Poisson regression. This corroborates our analyses and findings from earlier in the paper, and allows us to now draw the overarching conclusions of our analysis. 
+
 # Conclusions
 
 General points to discuss: 
