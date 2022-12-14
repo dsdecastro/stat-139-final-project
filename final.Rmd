@@ -467,7 +467,8 @@ modelsummary(list("all schools"=lm6,
                   "schools with only\n2020 data"=lm6.twenty.only),
              estimate="{estimate}", 
              statistic="{p.value}",
-             shape=term ~ model + statistic)
+             shape=term ~ model + statistic, 
+             gof_omit="IC")
 ```
 
 As we can see, when the sample of the institutions used to fit the model changes, some of the coefficient estimates change vastly. Take, for example, the coefficient estimate for `religionYes`, which can be interpreted as the change in cases that we would expect if a given school were to have a religious affiliation rather than not have one. This coefficient estimate is not statistically significant when all institutions are considered together, is positive and statistically significant when the institutions that reported data for the entire academic year are considered, and negative and statistically significant when the institutions that only reported data for the fall are considered. In fact, if one were to inspect the table above, they would notice that the majority of predictors included in this baseline models experienced changes in coefficient estimates and statistical significance as the sample of institutions considered was changed.  
@@ -577,7 +578,8 @@ religiousInteraction <- lm(log(cases + epsilon) ~ religious*( tuition +
             percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
             on.campus.housing + gap20repub + 
             private + percent.student.loan + mask.mandated.days +
-            occupational.degree + hs.equivalent.degree), data=full.cases)
+            occupational.degree + hs.equivalent.degree) - religious:private,
+            data=full.cases)
 
 relIn.summary = summary(religiousInteraction)
 
@@ -603,7 +605,7 @@ data.frame(coefficients = significant_coeff,
 
 The `religiousInteraction` model clarifies the significance of the `religious` predictor: When accounting for the interactions between `religious` and other predictors, as seen in this model, `religious` becomes a statistically significant predictor, with a p-value of 0.000290, significantly below the p-value of $\alpha = 0.05$. This indicates that the previous "base model" had `religious` as an insignificant predictor because it interacted with other variables which were collinear and therefore shared a lot of predictive power. Given the number of confounding variables, this result makes sense. We see in this model that the coefficient on the `religiousYes` variable is 3.665, indicating that when looking at a religiously-affiliated school versus one that is not, holding all other variables constant, the religious affiliation alone implies an increase of $e^{3.665}$ Covid cases, which is a significant increase. 
 
-`religious` had a statistically significant interactive term with 5 other variables, which were: `percent.black`, `percent.american.native`, `percent.fin.aid`, `on.campus.housing`, and `mask.mandated.days`. For example, the term `religiousYes:mask.mandated.days` in the summary results of the interaction model had a coefficient of 2.275e-03 and a p-value of 6.43e-05. This implies that it is statistically significant in this model, and for religiously affiliated schools, a one-day increase in mask mandates correlates with an increase in log Covid cases compared to its non-religious counterpart (specifically $e^{0.002275}$. This result is interesting, and could prompt further investigation in a different paper. 
+`religious` had a statistically significant interactive term with 5 other variables, which were: `percent.black`, `percent.american.native`, `grad.rate`, `on.campus.housing`, and `mask.mandated.days`. For example, the term `religiousYes:mask.mandated.days` in the summary results of the interaction model had a coefficient of 2.275e-03 and a p-value of 6.43e-05. This implies that it is statistically significant in this model, and for religiously affiliated schools, a one-day increase in mask mandates correlates with an increase in log Covid cases compared to its non-religious counterpart (specifically $e^{0.002275}$. This result is interesting, and could prompt further investigation in a different paper. 
 
 Given the significance of the interaction terms in our partial interaction model, we will now look at a full interaction model with all predictive variables in this paper to predict the 2020 Covid cases. Significant results relating to the `religious` predictor are printed below. 
 
@@ -617,7 +619,8 @@ fullInteraction <- lm(log(cases + epsilon) ~ (religious + tuition +
             percent.women + grad.rate + log(100-percent.fin.aid+epsilon) + 
             on.campus.housing + gap20repub + 
             private + percent.student.loan + mask.mandated.days +
-            occupational.degree + hs.equivalent.degree)^2, data=full.cases)
+            occupational.degree + hs.equivalent.degree)^2 - religious:private,
+            data=full.cases)
 
 #summary(fullInteraction)
 fullIn.summary = summary(fullInteraction)
@@ -1139,7 +1142,8 @@ fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcoun
     percent.two.more.races + percent.women + grad.rate + log(100 - 
     percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
-    hs.equivalent.degree)^2, data=full.cases, family="poisson")
+    hs.equivalent.degree)^2 - religious:private, 
+    data=full.cases, family="poisson")
 
 fI.p.summary = summary(fullInteraction)
 
@@ -1162,8 +1166,8 @@ p.compare.df$coefficient <- rownames(p.compare.df)
 
 cov <- vcovHC(fullInteraction.poisson, type="HC0")
 std.err <- sqrt(diag(cov))
-r.est <- data.frame("Poisson Estimate"=unname(coef(fullInteraction.poisson)[-36]), 
-                    Poisson.p.value= 2 * pnorm(abs(coef(fullInteraction.poisson)[-36]/std.err), lower.tail=FALSE))
+r.est <- data.frame("Poisson Estimate"=unname(coef(fullInteraction.poisson)), 
+                    Poisson.p.value= 2 * pnorm(abs(coef(fullInteraction.poisson)/std.err), lower.tail=FALSE))
 r.est$coefficient <- rownames(r.est)
 
 merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
@@ -1184,7 +1188,8 @@ fI.lr.poisson <- glm(cases ~ (religious + tuition + log(total.headcount +
     epsilon):percent.two.more.races - log(percent.black + epsilon):percent.women - 
     log(percent.hispanic.latino + epsilon):log(percent.pacific.islander + 
         epsilon) - percent.white:gap20repub - percent.two.more.races:gap20repub - 
-    on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree, 
+    on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree 
+    - religious:private, 
     data=full.cases, family="poisson", weights=1/total.headcount)
 
 fI.lr.p.summary = summary(fI.lasso.remaining)
@@ -1208,8 +1213,8 @@ p.compare.df$coefficient <- rownames(p.compare.df)
 
 cov <- vcovHC(fI.lr.poisson, type="HC0")
 std.err <- sqrt(diag(cov))
-r.est <- data.frame("Poisson Estimate"=unname(coef(fI.lr.poisson)[-35]), 
-                    Poisson.p.value= 2 * pnorm(abs(coef(fI.lr.poisson)[-35]/std.err), lower.tail=FALSE))
+r.est <- data.frame("Poisson Estimate"=unname(coef(fI.lr.poisson)), 
+                    Poisson.p.value= 2 * pnorm(abs(coef(fI.lr.poisson)/std.err), lower.tail=FALSE))
 r.est$coefficient <- rownames(r.est)
 
 merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
@@ -1217,6 +1222,7 @@ merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
 
 In the Poisson regression version of LASSO-Selected Model 2, only the coefficient estimate for `religiousYes` remained statistically significant; `religiousYes:mask.mandated.days` was no longer statistically significant after we assumed that the errors took on the Poisson distribution. 
 
+\small
 ```{r, eval=T, render=lemon_print, caption="Backwards Sequential Variable Selection Model: Gaussian vs. Poisson\n(Only predictors related to `religious`)"}
 back.step.p <- glm(cases ~ religious + tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
@@ -1300,6 +1306,7 @@ r.est$coefficient <- rownames(r.est)
 
 merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
 ```
+\normalsize
 
 Of the three `religious` interaction effects that were determined to be statistically significant in the Gaussian `back.step` model, only two remained statistically significant in the Poisson regression recreation of this model: `religiousYes:mask.mandated.days` and `religiousYes:on.campus.housingYes`. `religiousYes:log(percent.asian + epsilon)` was not statistically significant in the Poisson model. 
 
