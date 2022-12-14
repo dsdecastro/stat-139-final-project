@@ -854,8 +854,6 @@ both.df = data.frame(coefficients = significant_coeff,
 both.df
 ```
 
-Model Comparison and Discussion: 
-
 The results of the five step models explored come to very similar conclusions: though `religious` alone was sometimes included as a predictor and sometimes not, it was never statistically significant in the models. Conversely, five interactive terms stood out, namely, `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes`, `religiousYes:tuition`, `religiousYes:log(percent.asian + epsilon)`, and `religiousYes:percent.two.more.races`. Three of these (`mask.mandated.days`, `on.campus.housing`, and `percent.asian`) were statistically significant in four of the models, and the remaining two were significant in three of those four. The fifth model, the forward interaction model starting from the intercept model, had no statistically significant interactive terms with `religious`. Of these interactions, `mask.mandated.days` was always the most statistically significant with `religious`. Next was `on.campus.housing`, then typically `percent.asian`. The significance of these interaction terms can be interpreted as an indication that the relationship between case counts and the religious affiliation of a school changes based on the values of these other predictors. 
 
 ```{r}
@@ -866,7 +864,7 @@ aic.results
 
 We see in the above table that the models with the lowest AIC (this indicates a "better" model) is the Backward Step model and the Forward (from the backward model). These are the same models, as discussed above, as the forward procedure did not add any variables to the starting backward model. Notably, these included all five discussed interactive terms with `religious`. Conversely, the model with the greatest AIC was the Forward direction model starting from the intercept model. This was the model without the `religious` interaction terms. 
 
-We thought that the backward step model may be the worst for our data due to the high collinearity, as the procedure would force the model to consider and keep collinear variables because it starts with them. Conversely, a forward stepwise model could entirely omit them from the procedure. While the run time for the backward step model was the greatest and is indicative of considering so many interactive terms, it has a higher AIC and does not seem to differ much with variable significance from other step models we considered. 
+We thought that the backward step model may be the worst for our data due to the high collinearity, as the procedure would force the model to consider and keep collinear variables because it starts with them. Conversely, a forward stepwise model could entirely omit them from the procedure. While the run time for the backward step model was the longest and is indicative of considering so many interactive terms, it has a higher AIC and does not seem to differ much with variable significance from other step models we considered. 
 
 # LASSO for Variable Section
 
@@ -1100,48 +1098,39 @@ plot(p2, which=1)
 
 Clearly, there are still some outliers, which might be due to a number of factors, including exceptionally frequent testing, comprehensive Covid contact tracing systems, superspreader events on campus, or simply exceptionally large outbreaks on campus; however, the assumption of homoskedasticity now seems to be reasonable enough to trust our standard errors. 
 
-We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. The tables below illustrates the results of these analyses. 
+We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. Note that when determinging the statistical significance of a coefficient estimate in the Poisson models, we use heteroskedastic-consistent standard errors to account for possible violations of distribution assumption that the mean of the response is equal to its variance. The tables below illustrates the results of these analyses. 
 
-```{r, eval=T, render=lemon_print}
-cov.p2 <- vcovHC(p2, type="HC0")
-std.err <- sqrt(diag(cov.p2))
-r.est <- cbind(Estimate=coef(p2), "Robust SE" = std.err,
-"Pr(>|z|)" = 2 * pnorm(abs(coef(p2)/std.err), lower.tail=FALSE))
-r.est
-```
+```{r, eval=T, render=lemon_print, caption="Base Model: Gaussian vs. Poisson"}
+lm6.summary = summary(lm6)
 
-```{r, eval=T, render=lemon_print}
-religiousInteraction.poisson <- glm(cases ~ religious * 
-                                      (tuition + log(total.headcount + 
-    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
-    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
-    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
-    percent.two.more.races + percent.women + grad.rate + log(100 - 
-    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
-    private + percent.student.loan + mask.mandated.days + occupational.degree + 
-    hs.equivalent.degree), data=full.cases, family="poisson", 
-    weights=1/total.headcount)
-
-
-cov <- vcovHC(religiousInteraction.poisson, type="HC0")
-std.err <- sqrt(diag(cov))
-r.est <- cbind(Estimate=coef(religiousInteraction.poisson), "Robust SE" = std.err,
-"Pr(>|z|)" = 2 * pnorm(abs(coef(religiousInteraction.poisson)/std.err), lower.tail=FALSE))
-
+summary_pval <- lm6.summary$coefficients[ , 4]
 significant_pval = c()
 significant_coeff = c()
-for (i in 1:length(r.est[,1])) {
-  predictor_name = substr(rownames(r.est)[i], 1, 9)
-  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05 && predictor_name == "religious"){
-    significant_coeff <- c(significant_coeff, rownames(r.est)[i])
-    significant_pval <- c(significant_pval, r.est[i,3])
+terms = c()
+
+for (i in 2:length(summary_pval)){
+  if (summary_pval[i] < 0.05){
+    significant_pval = c(significant_pval, summary_pval[i])
+    significant_coeff = c(significant_coeff, lm6.summary$coefficients[i, 1])
   }
 }
-data.frame(coefficients = significant_coeff,
-           p.value = significant_pval)
+
+p.compare.df <- data.frame("Gaussian Estimate"=significant_coeff, 
+                           "Gaussian p.value"=significant_pval)
+p.compare.df$coefficient <- rownames(p.compare.df)
+
+cov.p2 <- vcovHC(p2, type="HC0")
+std.err <- sqrt(diag(cov.p2))
+r.est <- data.frame("Poisson Estimate"=unname(coef(p2)), 
+                    Poisson.p.value= 2 * pnorm(abs(coef(p2)/std.err), lower.tail=FALSE))
+r.est$coefficient <- rownames(r.est)
+
+merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
 ```
 
-```{r, eval=T, render=lemon_print}
+In the base model, only one coefficient that was statistically significant in the Gaussian model was no longer statistically significant in the Poisson model: `percent.student.loan`. Otherwise, though the p-values may have changed, the predictors that were statistically significant in the Gaussian model were statistically significant in the Poisson model as well. 
+
+```{r, eval=T, render=lemon_print, caption="Full Interaction  Model: Gaussian vs. Poisson\n(Only predictors related to `religious`)"}
 fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
     epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
@@ -1151,25 +1140,37 @@ fullInteraction.poisson <- glm(cases ~ (religious + tuition + log(total.headcoun
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
     hs.equivalent.degree)^2, data=full.cases, family="poisson")
 
-cov <- vcovHC(fullInteraction.poisson, type="HC0")
-std.err <- sqrt(diag(cov))
-r.est <- cbind(Estimate=coef(fullInteraction.poisson)[-36], "Robust SE" = std.err,
-"Pr(>|z|)" = 2 * pnorm(abs(coef(fullInteraction.poisson)[-36]/std.err), lower.tail=FALSE))
+fI.p.summary = summary(fullInteraction)
 
+summary_pval <- fI.p.summary$coefficients[ , 4]
 significant_pval = c()
 significant_coeff = c()
-for (i in 1:length(r.est[,1])) {
-  predictor_name = substr(rownames(r.est)[i], 1, 9)
-  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05 && predictor_name == "religious"){
-    significant_coeff <- c(significant_coeff, rownames(r.est)[i])
-    significant_pval <- c(significant_pval, r.est[i,3])
+terms = c()
+
+for (i in 2:length(summary_pval)){
+  predictor_name = substr(names(summary_pval[i]), 1, 9)
+  if (summary_pval[i] < 0.05 && predictor_name == "religious"){
+    significant_pval = c(significant_pval, summary_pval[i])
+    significant_coeff = c(significant_coeff, fI.p.summary$coefficients[i, 1])
   }
 }
-data.frame(coefficients = significant_coeff,
-           p.value = significant_pval)
+
+p.compare.df <- data.frame("Gaussian Estimate"=significant_coeff, 
+                           "Gaussian p.value"=significant_pval)
+p.compare.df$coefficient <- rownames(p.compare.df)
+
+cov <- vcovHC(fullInteraction.poisson, type="HC0")
+std.err <- sqrt(diag(cov))
+r.est <- data.frame("Poisson Estimate"=unname(coef(fullInteraction.poisson)[-36]), 
+                    Poisson.p.value= 2 * pnorm(abs(coef(fullInteraction.poisson)[-36]/std.err), lower.tail=FALSE))
+r.est$coefficient <- rownames(r.est)
+
+merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
 ```
 
-```{r, eval=T, render=lemon_print}
+With respect to the `fullInteraction` model, of the linear or interaction effects related to the predictor `religious`, two of the four coefficient estimates remained statistically significant in the Poisson model — `religiousYes:log(percent.asian + epsilon)` and `religiousYes:on.campus.housingYes` — while the other two did not. 
+
+```{r, eval=T, render=lemon_print, caption="LASSO-Selected Model 2: Gaussian vs. Poisson\n(Only predictors related to `religious`)"}
 fI.lr.poisson <- glm(cases ~ (religious + tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
     epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
@@ -1185,24 +1186,121 @@ fI.lr.poisson <- glm(cases ~ (religious + tuition + log(total.headcount +
     on.campus.housing:gap20repub - gap20repub:hs.equivalent.degree, 
     data=full.cases, family="poisson", weights=1/total.headcount)
 
-cov <- vcovHC(fI.lr.poisson, type="HC0")
-std.err <- sqrt(diag(cov))
-r.est <- cbind(Estimate=coef(fI.lr.poisson)[-35], "Robust SE" = std.err,
-"Pr(>|z|)" = 2 * pnorm(abs(coef(fI.lr.poisson)[-35]/std.err), lower.tail=FALSE))
+fI.lr.p.summary = summary(fI.lasso.remaining)
 
+summary_pval <- fI.lr.p.summary$coefficients[,4]
 significant_pval = c()
 significant_coeff = c()
-for (i in 1:length(r.est[,1])) {
-  predictor_name = substr(rownames(r.est)[i], 1, 9)
-  if (!is.na(r.est[i,3]) && r.est[i,3] < 0.05 && predictor_name == "religious"){
-    significant_coeff <- c(significant_coeff, rownames(r.est)[i])
-    significant_pval <- c(significant_pval, r.est[i,3])
+terms = c()
+
+for (i in 2:length(summary_pval)){
+  predictor_name = substr(names(summary_pval[i]), 1, 9)
+  if (summary_pval[i] < 0.05 && predictor_name == "religious"){
+    significant_pval = c(significant_pval, summary_pval[i])
+    significant_coeff = c(significant_coeff, fI.lr.p.summary$coefficients[i, 1])
   }
 }
-data.frame(coefficients = significant_coeff,
-           p.value = significant_pval)
+
+p.compare.df <- data.frame("Gaussian Estimate"=significant_coeff, 
+                           "Gaussian p.value"=significant_pval)
+p.compare.df$coefficient <- rownames(p.compare.df)
+
+cov <- vcovHC(fI.lr.poisson, type="HC0")
+std.err <- sqrt(diag(cov))
+r.est <- data.frame("Poisson Estimate"=unname(coef(fI.lr.poisson)[-35]), 
+                    Poisson.p.value= 2 * pnorm(abs(coef(fI.lr.poisson)[-35]/std.err), lower.tail=FALSE))
+r.est$coefficient <- rownames(r.est)
+
+merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
 ```
 
+In the Poisson regression version of LASSO-Selected Model 2, only the coefficient estimate for `religiousYes` remained statistically significant; `religiousYes:mask.mandated.days` was no longer statistically significant after we assumed that the errors took on the Poisson distribution. 
+
+```{r, eval=T, render=lemon_print, caption="Backwards Sequential Variable Selection Model: Gaussian vs. Poisson\n(Only predictors related to `religious`)"}
+back.step.p <- glm(cases ~ religious + tuition + log(total.headcount + 
+    epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
+    epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
+    epsilon) + log(percent.pacific.islander + epsilon) + percent.white + 
+    percent.two.more.races + percent.women + grad.rate + log(100 - 
+    percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
+    private + percent.student.loan + mask.mandated.days + occupational.degree + 
+    hs.equivalent.degree + religious:tuition + religious:log(total.headcount + 
+    epsilon) + religious:log(percent.american.native + epsilon) + 
+    religious:log(percent.asian + epsilon) + religious:log(percent.black + 
+    epsilon) + religious:percent.two.more.races + religious:on.campus.housing + 
+    religious:mask.mandated.days + tuition:log(percent.american.native + 
+    epsilon) + tuition:log(percent.asian + epsilon) + tuition:log(percent.black + 
+    epsilon) + tuition:percent.white + tuition:percent.two.more.races + 
+    tuition:grad.rate + tuition:gap20repub + tuition:private + 
+    tuition:percent.student.loan + tuition:occupational.degree + 
+    log(total.headcount + epsilon):log(percent.black + epsilon) + 
+    log(total.headcount + epsilon):grad.rate + log(total.headcount + 
+    epsilon):private + log(total.headcount + epsilon):mask.mandated.days + 
+    log(percent.american.native + epsilon):log(percent.asian + 
+        epsilon) + log(percent.american.native + epsilon):log(percent.hispanic.latino + 
+    epsilon) + log(percent.american.native + epsilon):percent.two.more.races + 
+    log(percent.american.native + epsilon):grad.rate + log(percent.american.native + 
+    epsilon):gap20repub + log(percent.american.native + epsilon):private + 
+    log(percent.american.native + epsilon):mask.mandated.days + 
+    log(percent.asian + epsilon):log(percent.black + epsilon) + 
+    log(percent.asian + epsilon):percent.women + log(percent.asian + 
+    epsilon):grad.rate + log(percent.asian + epsilon):log(100 - 
+    percent.fin.aid + epsilon) + log(percent.asian + epsilon):gap20repub + 
+    log(percent.asian + epsilon):mask.mandated.days + log(percent.asian + 
+    epsilon):hs.equivalent.degree + log(percent.black + epsilon):percent.two.more.races + 
+    log(percent.black + epsilon):percent.women + log(percent.black + 
+    epsilon):gap20repub + log(percent.black + epsilon):hs.equivalent.degree + 
+    log(percent.hispanic.latino + epsilon):percent.white + log(percent.hispanic.latino + 
+    epsilon):grad.rate + log(percent.hispanic.latino + epsilon):hs.equivalent.degree + 
+    log(percent.pacific.islander + epsilon):percent.women + log(percent.pacific.islander + 
+    epsilon):gap20repub + log(percent.pacific.islander + epsilon):hs.equivalent.degree + 
+    percent.white:percent.two.more.races + percent.white:on.campus.housing + 
+    percent.white:mask.mandated.days + percent.two.more.races:grad.rate + 
+    percent.two.more.races:log(100 - percent.fin.aid + epsilon) + 
+    percent.two.more.races:mask.mandated.days + percent.two.more.races:occupational.degree + 
+    percent.two.more.races:hs.equivalent.degree + percent.women:log(100 - 
+    percent.fin.aid + epsilon) + percent.women:on.campus.housing + 
+    percent.women:gap20repub + percent.women:percent.student.loan + 
+    grad.rate:log(100 - percent.fin.aid + epsilon) + grad.rate:gap20repub + 
+    grad.rate:percent.student.loan + grad.rate:hs.equivalent.degree + 
+    log(100 - percent.fin.aid + epsilon):on.campus.housing + 
+    log(100 - percent.fin.aid + epsilon):occupational.degree + 
+    on.campus.housing:gap20repub + on.campus.housing:percent.student.loan + 
+    on.campus.housing:mask.mandated.days + on.campus.housing:occupational.degree + 
+    on.campus.housing:hs.equivalent.degree + gap20repub:private + 
+    private:occupational.degree + percent.student.loan:mask.mandated.days + 
+    percent.student.loan:hs.equivalent.degree + occupational.degree:hs.equivalent.degree, 
+    data=df, family="poisson", weights=1/total.headcount)
+
+back.step.summary = summary(back.step)
+
+summary_pval <- back.step.summary$coefficients[,4]
+significant_pval = c()
+significant_coeff = c()
+terms = c()
+
+for (i in 2:length(summary_pval)){
+  predictor_name = substr(names(summary_pval[i]), 1, 9)
+  if (summary_pval[i] < 0.05 && predictor_name == "religious"){
+    significant_pval = c(significant_pval, summary_pval[i])
+    significant_coeff = c(significant_coeff, back.step.summary$coefficients[i, 1])
+  }
+}
+
+p.compare.df <- data.frame("Gaussian Estimate"=significant_coeff, 
+                           "Gaussian p.value"=significant_pval)
+p.compare.df$coefficient <- rownames(p.compare.df)
+
+cov <- vcovHC(back.step.p, type="HC0")
+std.err <- sqrt(diag(cov))
+r.est <- data.frame("Poisson Estimate"=unname(coef(back.step.p)), 
+                    Poisson.p.value= 2 * pnorm(abs(coef(back.step.p)/std.err), lower.tail=FALSE))
+r.est$coefficient <- rownames(r.est)
+
+merge(p.compare.df, r.est, by="coefficient", all.x=TRUE)
+```
+
+Of the three `religious` interaction effects that were determined to be statistically significant in the Gaussian `back.step` model, only two remained statistically significant in the Poisson regression recreation of this model: `religiousYes:mask.mandated.days` and `religiousYes:on.campus.housingYes`. `religiousYes:log(percent.asian + epsilon)` was not statistically significant in the Poisson model. 
 
 # Conclusions
 
@@ -1241,29 +1339,6 @@ par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
 plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
 plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
 plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
-```
-
-
-
-
-# Daniel scratch work 
-
-```{r, eval=T}
-normalized.df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree", "state")]
-normalized.df$religious <- normalized.df$religious == "Yes"
-normalized.df$on.campus.housing <- normalized.df$on.campus.housing == "Yes"
-normalized.df$private <- normalized.df$private == "Yes"
-normalized.df$occupational.degree <- normalized.df$occupational.degree == "Yes"
-normalized.df$hs.equivalent.degree <- normalized.df$hs.equivalent.degree == "Yes"
-
-for (i in 1:length(colnames(normalized.df))) {
-  if (!is.factor(normalized.df[,i]) && colnames(normalized.df)[i] != "cases") {
-    normalized.df[,i] <- scale(normalized.df[,i])
-  }
-}
-
-random.offset <- glmer(cases ~ 1 + religious + (1|state) + offset(log(total.headcount)), 
-      data=normalized.df, family="poisson")
 ```
 
 
