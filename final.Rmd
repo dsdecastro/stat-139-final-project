@@ -741,7 +741,7 @@ RMSE(full.cases$cases, predict(simple.fullInteraction, full.cases))
 
 # In Search of a Parsimonious Model: Sequential Variable Selection Models
 
-Of course, both `religiousInteraction` and `fullInteraction` are large, complicated models with many predictors — this makes them hard to interpret, and also leaves our significance tests diminished in statistical power. In order to find more parsimonious models — i.e., remove some predictors from these models — we performed Sequential Variable Selection using AIC as our model comparison criteria, stepping backward, forward, and in both directions. Brief descriptions and results from each resulting model are below. 
+Of course, both `religiousInteraction` and `fullInteraction` are large, complicated models with many predictors — this makes them hard to interpret, and also leaves our significance tests diminished in statistical power. In order to find more parsimonious models — i.e., remove some predictors from these models — we performed Sequential Variable Selection using AIC as our model comparison criterion, stepping backward, forward, and in both directions. Brief descriptions and results from each resulting model are below. 
 
 Backward step model: For this model, we started with `fullInteraction`, stepping backwards until a reduction in AIC was no longer possible. This process removed 116 predictors, leaving the resulting model, `back.step`, with 94 predictors. This list includes `religiousYes`, as well as interaction between `religious` and eight other predictors: `tuition`, `log(total.headcount + epsilon)`, `log(percent.american.native + epsilon)`, `log(percent.asian + epsilon)`, `log(percent.black + epsilon)`, `percent.two.more.races`, `on.campus.housingYes`, and `mask.mandated.days`. Of the nine predictors related to `religious` included in this model, only 5 were significant at the 0.05 level: `religiousYes:tuition`, `religiousYes:percent.two.more.races	`, `religiousYes:log(percent.asian + epsilon)`, `religiousYes:on.campus.housingYes`, and `religiousYes:mask.mandated.days`, in the table below. Thus, according to this model, the statistically significant relationship between `religious` and `cases` changes in nature based on the predictors `log(percent.asian + epsilon)`, `on.campus.housingYes`, `mask.mandated.days`, `percent.two.more.races`, and `tuition`. 
 
@@ -1317,17 +1317,6 @@ Of the three `religious` interaction effects that were determined to be statisti
 Overall, we have observed that most of the coefficients that were marked as statistically significant in the Gaussian models fit earlier in the paper remained statistically significant under the assumptions of Poisson regression. This corroborates our analyses and findings from earlier in the paper, and allows us to now draw the overarching conclusions of our analysis. 
 
 # Conclusions
-
-General points to discuss: 
-
-- Brief summary of first three sections: Group Testing, Assumptions, 2020/21/total.cases decision
-- Linear model recap, determining the significance of `religious` relies a lot on its interactions 
-- AIC step comes to similar conclusions? 
-
-Discussing inferences: 
-- Which coefficients related to `religious` (linear and interaction effects) did we find to be significant at each stage of our analyses? 
-- Where the findings differ, which models do we choose to give more credit to? Which findings are we more confident in (based on number of models that support the significance of a predictor)? 
-- Giving the interpretation of every predictor that is discussed? 
 
 
 
