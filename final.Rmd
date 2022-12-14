@@ -832,9 +832,10 @@ forward2.df
 ```
 \end{center}
 
-Forward step (from intercept): For this model, we stepped forward from an intercept model. As a result, `forward.step1` incorporated 67 predictors. This list of predictors did not include `religiousYes`, or any interaction term with `religious`. This could be taken as evidence that `religious` really is not a relevant predictor at all, at least compared to the many other available predictors and their interactions.
+*Forward step (from intercept):* For this model, we stepped forward from an intercept model. As a result, `forward.step1` incorporated 67 predictors. This list of predictors did not include `religiousYes`, or any interaction term with `religious`. This could be taken as evidence that `religious` really is not a relevant predictor at all, at least compared to the many other available predictors and their interactions.
 
-```{r, eval=T, cache=T}
+\begin{center}
+```{r, eval=T, cache=T, render=lemon_print}
 df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
 df <- df[complete.cases(df),]
 
@@ -843,10 +844,12 @@ model0 <- lm(log(cases+epsilon) ~ 1, df)
 forward.step1 <- step(model0, scope = list(upper = formula(fullInteraction)), 
                       direction = "forward", k=2, trace=0)
 ```
+\end{center}
 
-Bidirectional step: For this model, we used our base model as our starting point, and stepped in both directions (alternating forwards and backwards), until an improvement in AIC was no longer possible. As a result, 55 predictors were added to the base model to produce `both.step`, a model with 75 total predictors. This list of predictors for this model was extremely similar to the list of predictors included in the `forward.step` model (from the "base model"); only four predictors were different between the two models, none of which were related to `religious`. Predictably, the same interaction terms with `religious` that were significant in `forward.step` were statistically significant in this model as well (noted below), and `religiousYes` was again not statistically significant. This model corroborates the idea that whether an institution is religious changes the relationship between `cases` and these other predictors, but that there is no relationship between the predictor `religious` and the response `cases`. 
+*Bidirectional step:* For this model, we used our base model as our starting point, and stepped in both directions (alternating forwards and backwards), until an improvement in AIC was no longer possible. As a result, 55 predictors were added to the base model to produce `both.step`, a model with 75 total predictors. This list of predictors for this model was extremely similar to the list of predictors included in the `forward.step` model (from the "base model"); only four predictors were different between the two models, none of which were related to `religious`. Predictably, the same interaction terms with `religious` that were significant in `forward.step` were statistically significant in this model as well (noted below), and `religiousYes` was again not statistically significant. This model corroborates the idea that whether an institution is religious changes the relationship between `cases` and these other predictors, but that there is no relationship between the predictor `religious` and the response `cases`. 
 
-```{r, eval=T, cache=T}
+\begin{center}
+```{r, eval=T, cache=T, render=lemon_print}
 both.step = step(lm7, scope = list(lower = formula(model0), upper = formula(fullInteraction)),
             direction = "both", k=2, trace=0)
 
@@ -870,18 +873,21 @@ both.df = data.frame(coefficients = significant_coeff,
            p.value = significant_pval)
 both.df
 ```
+\end{center}
 
 The results of the five step models explored come to very similar conclusions: though `religious` alone was sometimes included as a predictor and sometimes not, it was never statistically significant in the models. Conversely, five interactive terms stood out, namely, `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes`, `religiousYes:tuition`, `religiousYes:log(percent.asian + epsilon)`, and `religiousYes:percent.two.more.races`. Three of these (`mask.mandated.days`, `on.campus.housing`, and `percent.asian`) were statistically significant in four of the models, and the remaining two were significant in three of those four. The fifth model, the forward interaction model starting from the intercept model, had no statistically significant interactive terms with `religious`. Of these interactions, `mask.mandated.days` was always the most statistically significant with `religious`. Next was `on.campus.housing`, then typically `percent.asian`. The significance of these interaction terms can be interpreted as an indication that the relationship between case counts and the religious affiliation of a school changes based on the values of these other predictors. 
 
-```{r}
+We see in the table below that the models with the lowest AIC (this indicates a "better" model) is the Backward Step model and the Forward (from the backward model). These are the same models, as discussed above, as the forward procedure did not add any variables to the starting backward model. Notably, these included all five discussed interactive terms with `religious`. Conversely, the model with the greatest AIC was the Forward direction model starting from the intercept model. This was the model without the `religious` interaction terms. 
+
+\begin{center}
+```{r, render=lemon_print}
 aic.results = data.frame(c("Backward Step", "Forward (from base model)", "Forward (from backward model)", "Forward (from intercept model)", "Both Directions"), c(AIC(back.step), AIC(forward.step), AIC(forward.step2), AIC(forward.step1), AIC(both.step)))
 colnames(aic.results) = c("Model", "AIC")
 aic.results
 ```
+\end{center}
 
-We see in the above table that the models with the lowest AIC (this indicates a "better" model) is the Backward Step model and the Forward (from the backward model). These are the same models, as discussed above, as the forward procedure did not add any variables to the starting backward model. Notably, these included all five discussed interactive terms with `religious`. Conversely, the model with the greatest AIC was the Forward direction model starting from the intercept model. This was the model without the `religious` interaction terms. 
-
-We thought that the backward step model may be the worst for our data due to the high collinearity, as the procedure would force the model to consider and keep collinear variables because it starts with them. Conversely, a forward stepwise model could entirely omit them from the procedure. While the run time for the backward step model was the longest and is indicative of considering so many interactive terms, it has a higher AIC and does not seem to differ much with variable significance from other step models we considered. 
+We thought that the backward step model may be the worst for our data due to the high collinearity, as the procedure would force the model to consider and keep collinear variables because it starts with them. Conversely, a forward stepwise model could entirely omit them from the procedure. While the run time for the backward step model was the longest and is indicative of considering so many interactive terms, it has a similar AIC value to the forward step model from the base model (the model with the second-lowest AIC) and does not seem to differ much with variable significance from other models we considered in this section. 
 
 # LASSO for Variable Section
 
