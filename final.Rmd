@@ -772,9 +772,10 @@ back.df
 ```
 \end{center}
 
-Forward step: For this model, we started with our base model, and stepped forward until a reduction in AIC was no longer possible. This process added 55 predictors, leaving `forward.step` with 75 predictors. In terms of the predictors related to `religious`, this list included `religiousYes`,  `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes`, `religiousYes:tuition`, `religiousYes:log(percent.asian + epsilon)`, and `religiousYes:percent.two.more.races`. Interestingly, all of the `religious` interaction terms in this model were statistically significant at the 0.05 level, but the predictor `religiousYes` itself was not. We can interpret this model as saying that whether a school has a religious affiliation changes the relationship between `cases` and these other predictors, but that `religious` does not have a significant association with `cases` in of itself.  
+*Forward step*: For this model, we started with our base model, and stepped forward until a reduction in AIC was no longer possible. This process added 55 predictors, leaving `forward.step` with 75 predictors. In terms of the predictors related to `religious`, this list included `religiousYes`,  `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes`, `religiousYes:tuition`, `religiousYes:log(percent.asian + epsilon)`, and `religiousYes:percent.two.more.races`. Interestingly, all of the `religious` interaction terms in this model were statistically significant at the 0.05 level, but the predictor `religiousYes` itself was not. We can interpret this model as saying that whether a school has a religious affiliation changes the relationship between `cases` and these other predictors, but that `religious` does not have a significant association with `cases` in of itself.  
 
-```{r, eval=T, cache=T}
+\begin{center}
+```{r, eval=T, cache=T, render=lemon_print}
 forward.step <- step(lm7, scope = list(upper = formula(fullInteraction)), 
                      direction = "forward", k=2, trace=0)
 forward.summary = summary(forward.step)
@@ -798,6 +799,7 @@ forward.df = data.frame(coefficients = significant_coeff,
 
 forward.df
 ```
+\end{center}
 
 Forward step (from back): For this model, we started with the back step model (described above, with 94 predictors), and stepped forward until a reduction in AIC was no longer possible. This process did not actually add any predictors to the back step model, leaving `forward.step` with 94 predictors. But, the significance of each predictor changed, as only three `religious` interaction terms are statistically significant in this model. These terms are `religiousYes:mask.mandated.days`, `religiousYes:on.campus.housingYes` and `religiousYes:log(percent.asian + epsilon)`.
 
