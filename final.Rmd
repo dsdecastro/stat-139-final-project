@@ -1325,31 +1325,6 @@ Discussing inferences:
 - Where the findings differ, which models do we choose to give more credit to? Which findings are we more confident in (based on number of models that support the significance of a predictor)? 
 - Giving the interpretation of every predictor that is discussed? 
 
-# Appendix A: Plots to Check the Assumption of Linearity
-
-```{r, eval=T}
-par(mfrow=c(3,2), mar=1.5 * c(1,1,1,1), cex=0.5)
-plot(log(total.cases + epsilon) ~ tuition, data=full.cases,
-     main="tuition")
-plot(log(total.cases + epsilon) ~ log(total.headcount+epsilon), data=full.cases,
-     main="total.headcount")
-plot(log(total.cases + epsilon) ~ percent.american.native, data=full.cases,
-     main="percent.american.native")
-plot(log(total.cases + epsilon) ~ percent.asian, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.black, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.hispanic.latino, data=full.cases)
-par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
-plot(log(total.cases + epsilon) ~ percent.pacific.islander, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.white, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.two.more.races, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.women, data=full.cases)
-plot(log(total.cases + epsilon) ~ grad.rate, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.fin.aid, data=full.cases)
-par(mfrow=c(3,2), mar=2 * c(1,1,1,1), cex=0.5)
-plot(log(total.cases + epsilon) ~ gap20repub, data=full.cases)
-plot(log(total.cases + epsilon) ~ percent.student.loan, data=full.cases)
-plot(log(total.cases + epsilon) ~ mask.mandated.days, data=full.cases)
-```
 
 
 
