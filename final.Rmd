@@ -495,13 +495,13 @@ data.frame(predictor=c("gap20repub"), test.statistic=c(gap20.test$statistic),
 
 With a p-value that is much smaller than our $\alpha =0.05$ (again, because we do not assume equal variances between the groups, the Welch approximation for degrees of freedom is used), we reject the null hypothesis, concluding that the true mean `gap20repub` is different for the schools that did report case data for 2021 versus those that did not. As it turns out, the 95% $t$-based confidence interval for the mean `gap20repub` for the schools that did report 2021 case data minus the mean `gap20repub` for the schools that did not is (-9.468120, -4.959647) — thus, we conclude that the schools that did report 2021 case data are located in states that are considerably more left-leaning than the schools that did not. 
 
-We repeat this sort of analysis for `total.headcount`, `tuition`, `percent.fin.aid`, `mask.mandated.days`, `on.campus.housing`, and `religious`, predictors that we have chosen based on large differences in the coefficient estimates produced by the models above when fit to only one of the two subgroups of institutions. We use a two-sided $t$-test for the quantitative variables and two-sided z-tests for proportions (ADDRESS) for the `categorical` predictors. The hypotheses are similar to above, the null being that the true means/proportions are equal between the two groups, and the alternative being that they are not equal. As per the results shown below, the tests for all six of these predictors showed statistically significant differences between the two groups of universities. 
+We repeat this sort of analysis for `total.headcount`, `tuition`, `percent.fin.aid`, `mask.mandated.days`, `on.campus.housing`, and `religious`, predictors that we have chosen based on large differences in the coefficient estimates produced by the models above when fit to only one of the two subgroups of institutions. We use a two-sided $t$-test for the quantitative variables and two-sided z-tests for proportions for the `categorical` predictors; we also perform the same transformations as above to make sure that the predictor in question is approximately normally distributed in each test. The hypotheses are similar to the `gap20repub` test, the null being that the true means/proportions are equal between the two groups, and the alternative being that they are not equal. As per the results shown below, the tests for all six of these predictors showed statistically significant differences between the two groups of universities. 
 
 \begin{center}
 ```{r, eval=T, render=lemon_print}
-size.test <- t.test(both$total.headcount, only.twenty$total.headcount)
+size.test <- t.test(log(both$total.headcount), log(only.twenty$total.headcount))
 tuition.test <- t.test(both$tuition, only.twenty$tuition)
-fin.aid.test <- t.test(both$percent.fin.aid, only.twenty$percent.fin.aid)
+fin.aid.test <- t.test(log(100-both$percent.fin.aid+1), log(100-only.twenty$percent.fin.aid+1))
 mask.test <- t.test(both$mask.mandated.days, only.twenty$mask.mandated.days)
 on.campus.test <- prop.test(x=matrix(c(sum(both$on.campus.housing == "Yes"), sum(both$on.campus.housing == "No"), 
                      sum(only.twenty$on.campus.housing == "Yes"), 
