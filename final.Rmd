@@ -821,6 +821,9 @@ forward2.df
 Forward step (from intercept): For this model, we stepped forward from an intercept model. As a result, `forward.step1` incorporated 67 predictors. This list of predictors did not include `religiousYes`, or any interaction term with `religious`. This could be taken as evidence that `religious` really is not a relevant predictor at all, at least compared to the many other available predictors and their interactions.
 
 ```{r, eval=T, cache=T}
+df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
+df <- df[complete.cases(df),]
+
 model0 <- lm(log(cases+epsilon) ~ 1, df)
 
 forward.step1 <- step(model0, scope = list(upper = formula(fullInteraction)), 
@@ -875,9 +878,6 @@ We will apply LASSO to both the `religiousInteraction` and `fullInteraction` mod
 First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`; call this model LASSO Model 1. 
 
 ```{r, eval=T, fig.height=4}
-df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
-df <- df[complete.cases(df),]
-
 lambda.range <- 10^seq(-10, 3, 0.1)
 rI.cv <- cv.glmnet(model.matrix(religiousInteraction), df$cases, 
                    lambda=lambda.range, alpha=1, trace=0)
