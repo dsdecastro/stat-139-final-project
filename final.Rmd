@@ -18,6 +18,7 @@ library(modelsummary)
 library(sandwich)
 library(ggplot2)
 library(lme4)
+library(sjPlot)
 
 library(lemon)
 knit_print.data.frame <- lemon_print
@@ -821,8 +822,12 @@ forward2.df
 Forward step (from intercept): For this model, we stepped forward from an intercept model. As a result, `forward.step1` incorporated 67 predictors. This list of predictors did not include `religiousYes`, or any interaction term with `religious`. This could be taken as evidence that `religious` really is not a relevant predictor at all, at least compared to the many other available predictors and their interactions.
 
 ```{r, eval=T, cache=T}
+<<<<<<< HEAD
 df <- full.cases[,c("cases", "religious", "tuition", "total.headcount", "percent.american.native", "percent.asian", "percent.black", "percent.hispanic.latino", "percent.pacific.islander", "percent.white", "percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "occupational.degree", "hs.equivalent.degree")]
 df <- df[complete.cases(df),]
+=======
+df = na.omit(full.cases[c("cases", "religious", "tuition", "total.headcount","percent.pacific.islander", "percent.hispanic.latino", "percent.white","percent.two.more.races", "percent.women", "grad.rate", "percent.fin.aid", "percent.american.native", "percent.asian","on.campus.housing", "gap20repub", "private", "percent.student.loan", "mask.mandated.days", "percent.black", "occupational.degree", "hs.equivalent.degree")])
+>>>>>>> e8827d5bdb0393eca00aa1523a1b582e171c2451
 
 model0 <- lm(log(cases+epsilon) ~ 1, df)
 
