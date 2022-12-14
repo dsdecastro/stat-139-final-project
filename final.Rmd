@@ -232,7 +232,7 @@ write.csv(full.cases, "full_cases.csv")
 
 # Description of variables
 
-After performing the data cleaning procedures outlined above, we are left with the following ADJUST NUMBER! columns:
+After performing the data cleaning procedures outlined above, we are left with the following predictors:
 
 * **ipeds_id** This is the IPEDS id, specific to each institution and a commonly used identifier for Universities, created by IPEDS. 
 
