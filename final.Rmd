@@ -51,7 +51,7 @@ Our data for this project comes from three sources:
 
 4. The presidential elections data from STAT 139 Problem Set 4. Of this data set, we will be particularly focused on the `gap20repub` predictor, which we will use to help characterize the political climate of the state in which each institution is located.  
 
-After removing universities that were missing lots of data in the pull from the IPEDS data center, we were left with $n = 1,855$ observations.
+After removing universities that were missing lots of data in the pull from the IPEDS data center, we were left with $n = 1,705$ observations.
 
 # Data Cleaning Procedures
 
@@ -415,7 +415,7 @@ We claim that with these transformations, the assumption of linearity is reasona
 
 What remains to be shown is that the assumption of homoskedasticity is reasonable. In order to check this assumption, we fit basic regression models for `cases` and `total.cases` using all of the predictors in our predictor set.
 
-```{r, eval=T, fig.height=3}
+```{r, eval=T, fig.height=4}
 
 lm6 <- lm(log(cases + epsilon) ~ religious + tuition + 
             log(total.headcount+epsilon) + 
@@ -429,7 +429,7 @@ lm6 <- lm(log(cases + epsilon) ~ religious + tuition +
             occupational.degree + hs.equivalent.degree, data=full.cases)
 
 plot(lm6$residuals ~ lm6$fitted.values, main="cases (2020)", xlab="fitted values",
-     ylab="residuals", cex = 0.5)
+     ylab="residuals")
 abline(h=0, col="gray")
 ```
 
@@ -437,7 +437,7 @@ As is shown in the plot above, the spread of the residuals is not constant acros
 
 Below, we recreate the same plot, but for the case counts for the entire 2020-21 academic year. 
 
-```{r, eval=T, fig.height=3}
+```{r, eval=T, fig.height=4}
 lm7 <- lm(log(total.cases + epsilon) ~ religious + tuition + 
             log(total.headcount+epsilon) + 
             log(percent.american.native+epsilon) + log(percent.asian+epsilon) + 
@@ -460,7 +460,7 @@ In the above plot for the model for `total.cases`, the spread of the residuals a
 
 Naturally, there is a temptation to focus on case data for the entire academic year (the entire time period during which case data was collected by the *New York Times*). There is one problem, however: While the *New York Times* was able to compile case data for all of the schools in our data set for the fall semester of that year, it was not able to find data for 236 schools for the spring semester. This is a nontrivial number of observations given that our data set only consists of 1,705 different institutions; thus, to determine whether it would be sound to remove these 236 observations and fit models and perform statistical inferences on data from the entire academic year, we must determine whether the two groups of schools in question — those that reported data for the entire academic year, and those that did not — are sufficiently similar to one another. 
 
-The first step is to compare the coefficients of our baseline model (`lm6` above) when it is fit to all 1705 observations, as well as individually to the two different groups of schools in question. The coefficient estimates, along with the p-values (not adjusted to be heteroskedastically consistent) are given below.
+The first step is to compare the coefficients of our baseline model (`lm6` above) when it is fit to all 1,705 observations, as well as individually to the two different groups of schools in question. The coefficient estimates, along with the p-values (not adjusted to be heteroskedastically consistent) are given in Table 3. 
 
 ```{r, eval=T}
 lm6.both.only <- lm(formula(lm6), 
@@ -473,7 +473,8 @@ modelsummary(list("all schools"=lm6,
              estimate="{estimate}", 
              statistic="{p.value}",
              shape=term ~ model + statistic, 
-             gof_omit="IC")
+             gof_omit="IC", 
+             title="A comparison of the base model across three different samples.")
 ```
 
 As we can see, when the sample of the institutions used to fit the model changes, some of the coefficient estimates change vastly. Take, for example, the coefficient estimate for `religionYes`, which can be interpreted as the natural log of the change in cases that we would expect if a given school were to have a religious affiliation rather than not have one. This coefficient estimate is not statistically significant when all institutions are considered together, is positive and statistically significant when the institutions that reported data for the entire academic year are considered, and negative and statistically significant when the institutions that only reported data for the fall are considered. In fact, if one were to inspect the table above, they would notice that the majority of predictors included in this baseline model experienced changes in their coefficient estimates and statistical significance as the sample of institutions was changed.  
@@ -867,11 +868,11 @@ We will apply LASSO to both the `religiousInteraction` and `fullInteraction` mod
 
 First, we do so for the `religiousInteraction` model. We plot the $\lambda$ values that we cross validated to make sure that the minimum value given by R is not the lower or upper bound of those considered (which would suggest that we widen our range of $\lambda$ values considered); we then fit a LASSO model using the formula from `religiousInteraction`; call this model LASSO Model 1. 
 
-```{r, eval=T, fig.height=4}
+```{r, eval=T, fig.height=3}
 lambda.range <- 10^seq(-10, 3, 0.1)
 rI.cv <- cv.glmnet(model.matrix(religiousInteraction), df$cases, 
                    lambda=lambda.range, alpha=1, trace=0)
-plot(rI.cv)
+plot(rI.cv, cex=0.5)
 rI.lasso <- glmnet(model.matrix(religiousInteraction), df$cases,
                    lambda=rI.cv$lambda.min, alpha=1, trace=0)
 rI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(religiousInteraction)), beta=matrix(rI.lasso$beta)[,1])
@@ -883,10 +884,10 @@ rI.lasso.2 <- glmnet(model.matrix(religiousInteraction), df$cases,
 
 In LASSO Model 1, only the intercept estimate and the coefficient estimate for `religiousYes:percent.women` were shrunk all the way to zero. We now perform the same procedure with the `fullInteraction` model, creating LASSO Model 2: 
 
-```{r, eval=T, fig.height=4}
+```{r, eval=T, fig.height=3}
 fI.cv <- cv.glmnet(model.matrix(fullInteraction), df$cases, 
                    lambda=lambda.range, alpha=1, trace=0)
-plot(fI.cv)
+plot(fI.cv, cex=0.5)
 fI.lasso <- glmnet(model.matrix(fullInteraction), df$cases,
                    lambda=fI.cv$lambda.min, alpha=1, trace=0)
 fI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(fullInteraction)), beta=matrix(fI.lasso$beta)[,1])
@@ -895,9 +896,8 @@ fI.lasso.coef <- data.frame(coefficient=colnames(model.matrix(fullInteraction)),
 
 With this model, there are 11 coefficient estimates that were shrunk all the way to zero; of those related to `religious`, only `religiousYes:percent.women` was shrunk to zero. 
 
-In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero in each of LASSO Models 1 and 2. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. Call the new linear models LASSO-Selected Linear Model 1 and LASSO-Selected Linear Model 2. Tables 3 and 4 show the coefficients that we found to be statistically significant in each of these two models. 
+In order to determine which of the remaining predictors in each model are statistically significant, we refit a linear model using all the coefficients that were not shrunk to zero in each of LASSO Models 1 and 2. Note that even though the intercept was shrunk to zero by LASSO in both cases, we still include an intercept in this new model to make interpretation of the coefficient estimates in the resulting models easier. Call the new linear models LASSO-Selected Linear Model 1 and LASSO-Selected Linear Model 2. Tables 3 and 4 FIX show the coefficients that we found to be statistically significant in each of these two models. 
 
-\begin{center}
 ```{r, eval=T, render=lemon_print, caption="LASSO-Selected Linear Model 1"}
 rI.lasso.remaining <- lm(log(cases + epsilon) ~ religious*(tuition + 
             log(total.headcount+epsilon) + 
@@ -968,7 +968,6 @@ for (i in 2:length(summary_pval)){
 data.frame(coefficients = significant_coeff,
            p.value = significant_pval)
 ```
-\end{center}
 
 In both LASSO-Selected Linear Models 1 and 2, we find that `religiousYes` is statistically significant. Recall that this is the categorical indicator variable for `religious`, which can be interpreted as the natural logarithm of the multiplicative change in cases that we would expect for an institution with a given predictor set if it were to have a religious affiliation, rather than not have one, and all the other predictors were to remain constant.
 
@@ -983,21 +982,21 @@ betas <- fI.lasso.2$beta
 log_lam <- log(fI.lasso.2$lambda)
 plot(betas[1,] ~ log_lam, type="l", ylab=expression(beta), 
      xlab=expression(log(lambda)), ylim=c(-150,150), xlim=c(-7, max(log_lam)),
-     main="LASSO Model 2: Coefficient Estimate Trajectories")
+     main="LASSO Model 2: Coefficient Estimate Trajectories", cex=0.5)
 for (i in 2:dim(betas)[1]) {
   lines(betas[i,]~log_lam, lty=i, col=i)
 }
 ```
 
-In the end, we lean towards accepting the conclusions presented by the second model: With a wider range of interaction effects to consider, it is less likely that the statistically significant predictors were only marked as such because they help explain a relationship between `cases` and another predictor with which they are collinear. The conclusion of the LASSO models alone appears to be that there is a statistically significant relationship between `religious` and `cases`, and that the nature of this relationship changes based on the value of `mask.mandated.days`. Interestingly, in LASSO-Selected Model 2, the interaction coefficient `religiousYes:mask.mandated.days` has a positive coefficient: An increase in the number of mask mandated days during the 2020-21 academic year is associated, in this model, with an increase in the multiplicative change that we would expect for a given school if that school were to have a religious affiliation, compared to if that same school were to not have a religious affiliation. This phenomenon also seems to be present in LASSO-Selected Model 1, in which the coefficient estimate for `religious:mask.mandated.days` is also positive. 
+In the end, we lean towards accepting the conclusions presented by the larger second model: With a wider range of interaction effects to consider, it is less likely that the statistically significant predictors in this model were only marked as such because they help explain a relationship between `cases` and a different predictor with which they are collinear. Thus, the LASSO models suggest that there is a statistically significant relationship between `religious` and `cases`, and that the nature of this relationship changes based on the value of `mask.mandated.days`. Interestingly, in LASSO-Selected Model 2, the interaction coefficient `religiousYes:mask.mandated.days` has a positive coefficient: An increase in the number of mask mandated days during the 2020-21 academic year is associated, in this model, with an increase in the change that we would expect for a given school if that school were to have a religious affiliation, compared to if that same school were to not have a religious affiliation. This phenomenon also seems to be present in LASSO-Selected Model 1, in which the coefficient estimate for `religious:mask.mandated.days` is also positive. 
 
 # Hierarchical Multi-level Models
 
-We next chose to explore the relationship between 2020 Covid cases and our list of predictors using hierarchical multi-level models, namely the mixed effects models from the `lme4` package in R. We thought this model type would work well with our data because the data can be organized hierarchically as follows: The first level is at the university level; each university has predictors, such as `grad.rate` and `religious`, which are specific to each university. The second level in the hierarchy is the state level, where Universities in each specific state will share cultural, legislative, etc. characteristics that can be vaguely accounted for by sorting the "groups" by states. For example, mask mandates, which were decided by state, were in effect at that stage of the pandemic. Finally, these models have another advantageous capability of being able to account for "weight," meaning we can account for the affect `total.headcount` has on the number of Covid cases. 
+We next chose to explore the relationship between 2020 Covid cases and our list of predictors using hierarchical multi-level models, namely the mixed effects models from the `lme4` package in R. We thought this model type would work well with our data because the data can be organized hierarchically as follows: The first level is at the university level; each university has predictors, such as `grad.rate` and `religious`, which are specific to each university. The second level in the hierarchy is the state level, where universities in each specific state will share cultural, legislative, etc. characteristics that can be vaguely accounted for by sorting the "groups" by state. For example, mask mandates, which were decided by state, were in effect at that stage of the pandemic.
 
-A capability of the `lme4` mixed effects package is that it can produce both random intercept and random slope models. We decided that with the data we have, we can only look at random intercept mixed effects models. This is due to the number of observations we have; there are a total of 1705 Universities, which means that in each group (by state + Washington DC), there is an average of just over 36 data points per group. Especially given the differing densities of Universities (there are so many in Massachusetts), there are simply not enough observations per group to justify using and analyzing a random slope model. Fortunately, the nature of these mixed effects models means they will not overfit to the fewer observations in a given group.  
+A capability of the `lme4` mixed effects package is that it can produce both random intercept and random slope models. We decided that with the data we have, we can only look at random intercept mixed effects models. This is due to the number of observations we have; there are a total of 1,705 universities, which means that in each group (by state + Washington DC), there is an average of just over 33 data points per group. Especially given the differing densities of universities (there are 60 in Massachusetts alone), there are simply not enough observations per group to justify fitting and analyzing a random slope model. The nature of the random slope mixed effects models means they will not overfit to the fewer observations in a given group.  
 
-First we fit a model with all of the predictors from our "base model", except `total.headcount`, which we accounted for using the "weights = " functionality of the `lmer` modelling. We used a random intercept model and grouped by state, meaning that the results include the coefficients for each predictor, which are fixed by state, as well as the intercept, which should differ by state. Below is a model of the coefficient values, which we will use to best visualize a line graph. 
+First, we fit a model with all of the predictors from our "base model", except `total.headcount`, which we accounted for using the "weights = " functionality of the `lmer` modelling. We used a random intercept model and grouped by state, meaning that the results include the coefficients for each predictor, which are fixed by state, as well as the intercept, which should differ by state. Below is a plot of the coefficient values. 
 
 ```{r, fig.height=4}
 mer1 = suppressWarnings(lmer(log(cases + 1) ~ 1 + religious + tuition + 
@@ -1014,9 +1013,9 @@ mer1 = suppressWarnings(lmer(log(cases + 1) ~ 1 + religious + tuition +
 plot_model(mer1, title = "Random Intercept Model: Predictor Coefficient Plot")
 ```
 
-We see in the above model that certain coefficent estimates are significantly larger than the others. It is significant to note that `religiousYes` actualy has a negative affect on the 2020 Covid cases in this model, which is contrary to all previous models we have explored. 
+We see in the above plot that certain coefficent estimates are significantly larger than the others. It is worth noting that the coefficient estimate for `religiousYes` is actually negative in this model, which is contrary to all previous models we have explored; it is not, however, statistically significant, since the confidence interval covers zero. 
 
-We chose `percent.black` as for the x-axis below to visualize the process for this random intercept model because unlike `private` and `on.campus.housing`, it is a continuous predictor, and unlike `percent.pacific.islander` and `percent.american.native`, it does not have a lot of Universities with 0%. Otherwise, it has the largest coefficient, and will therefore create a more dramatic graph.  
+To visualize this random intercept model, we created the plot below, which explores the relationship between `percent.black` and 2020 Covid cases in institutions; it includes the slopes for each state (and DC) generated from our mixed effects (random intercept) model. We can see that the states have some spread in terms of differing intercepts. We can also see that, similar to the interaction models we explored, there is no significant visual relationship between religious institutions (red dots) and non-religious (blue dots) when comparing `percent.black` and `full.cases`. Here, we chose `percent.black` for the x-axis, because unlike `private` and `on.campus.housing`, it is a continuous predictor, and unlike `percent.pacific.islander` and `percent.american.native`, it does not have a lot of universities with 0%. 
 
 ```{r}
 color_list = seq(0,1,0.019)
@@ -1038,9 +1037,7 @@ legend(x = "topright",
 
 ```
 
-The above plot explores the relationship between `percent.black` and 2020 Covid cases in institutions, as well as plots the lines for each state (and DC) generated from our mixed effects (random intercept) model. We can see that the states have some spread in terms of differing intercepts. We can also see that, similar to the interaction models we explored, there is no significant visual relationship between religious institutions (red dots) and non-religious (blue dots) when comparing `percent.black` and `full.cases`. 
-
-Next we explore the relationship between `gap20repub` and `religious` and their interactive effect on 2020 Covid cases grouped by state (still using mixed effects, random intercept). We are exploring this given the feature of the mixed effects models in exploring predictors at the second level of the heirarchical model (ie. the state-level). `gap20repub` is unique by state, but not by institutions in each state. We formally test below whether the effect of university religious affiliation (on 2020 Covid cases) depends on `gap20repub`:
+Next we explore the relationship between `gap20repub` and `religious` and their interactive effect on 2020 Covid cases grouped by state (still using mixed effects, random intercept). We use random intercept models to do so, because of the way in which mixed effects models allow one to implement predictors at the group (state) level. `gap20repub` is unique by state, but does not take on a unique value in the institutions in each state. We formally test below whether the effect of university religious affiliation (on 2020 Covid cases) depends on `gap20repub`:
 
 ```{r}
 lmer3 = lmer(log(cases+1)~gap20repub*religious+(1|state),data=full.cases,weights=total.headcount/1000, REML=FALSE)
@@ -1067,13 +1064,13 @@ legend(x = "bottomright",          # Position
 
 ```
 
-The result of the anova test between nested models mixed effects models (one with interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap2020repub`. Though this was not flagged as a particularly significant interaction in the above models, it is not surprising, per se: It is clear that the `religious` significantly interacts with many other predictors. 
+The result of the ESS-$F$ test between nested models mixed effects models (one with interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap20repub`. Though this was not flagged as a particularly significant interaction in the above models — probably because of collinearity between `gap20repub` and other predictors — it is not surprising, per se: It is clear that the `religious` significantly interacts with many other predictors.
 
 # Sensitivity Analysis using Poisson Regression
 
 In "Checking the Assumptions of Linear Regression Models", we found behavior in our data set that calls into question the assumption of homoskedasticity that is used in all of the above methods, which are based on Gaussian regression. Because our response is count data, Poisson regression is an obvious candidate for improving the violation of this assumption. The first thing we do to verify this fact is to fit a Poisson regression model using the same formula as our base model from above; as the residuals versus fitted values plot below shows, Poisson regression does, for the most part, fix the intractable violations of homoskedasticity that we encountered with Gaussian regression. 
 
-```{r, eval=T, fig.height=4}
+```{r, eval=T, fig.height=3}
 p1 <- glm(cases ~ religious + tuition + log(total.headcount + 
     epsilon) + log(percent.american.native + epsilon) + log(percent.asian + 
     epsilon) + log(percent.black + epsilon) + log(percent.hispanic.latino + 
@@ -1082,7 +1079,7 @@ p1 <- glm(cases ~ religious + tuition + log(total.headcount +
     percent.fin.aid + epsilon) + on.campus.housing + gap20repub + 
     private + percent.student.loan + mask.mandated.days + occupational.degree + 
     hs.equivalent.degree, data=full.cases, family="poisson")
-plot(p1, which=1)
+plot(p1, which=1, cex=0.5)
 ```
 
 With this model, however, the problem is not completely solved: Because the spread in the responses seems to increase as fitted values increase, it seems that weighted regression would be the best approach in the Poisson setting. The most obvious candidate for weights is the predictor `total.headcount` — it is reasonable to think that as school size increases, the differences approaches to handling the outbreak of Covid-19 might be manifested in increasingly different case count numbers. The below plot shows that employing weighted-least-squares Poisson regression using `1/total.headcount` as weights for the most part fixes the problem of heteroskedasticity. 
@@ -1095,7 +1092,7 @@ plot(p2, which=1)
 
 Clearly, there are still some outliers, which might be due to a number of factors, including exceptionally frequent testing, comprehensive Covid contact tracing systems, superspreader events on campus, or simply exceptionally large outbreaks on campus; however, the assumption of homoskedasticity now seems to be reasonable enough to trust our standard errors. 
 
-We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. Note that when determinging the statistical significance of a coefficient estimate in the Poisson models, we use heteroskedastic-consistent standard errors to account for possible violations of distribution assumption that the mean of the response is equal to its variance. The tables below illustrates the results of these analyses. 
+We now fit Poisson regression models using the same formulas as the most notable Gaussian models, and compare the lists of coefficient estimates related to religious affiliation marked as statistically significant by the two approaches. Note that when determining the statistical significance of a coefficient estimate in the Poisson models, we use heteroskedastic-consistent standard errors to account for possible violations of distribution assumption that the mean of the response is equal to its variance. The tables below illustrates the results of these analyses. 
 
 ```{r, eval=T, render=lemon_print, caption="Base Model: Gaussian vs. Poisson"}
 lm6.summary = summary(lm6)
@@ -1305,36 +1302,37 @@ Of the three `religious` interaction effects that were determined to be statisti
 
 Overall, we have observed that most of the coefficients that were marked as statistically significant in the Gaussian models fit earlier in the paper remained statistically significant under the assumptions of Poisson regression. This corroborates our analyses and findings from earlier in the paper, and allows us to now draw the overarching conclusions of our analysis. 
 
-# Conclusions
+# Conclusions and Discussion
 
-We conclude that there is some association between the religious affiliation of a university and the Covid case counts that it reported during the fall 2020 semester — the relationship between these two variables, however, is nuanced, with interaction effects between `religious` and other predictors in our data set playing a large part. In particular, we found that the interactions between `religious` and each of  `mask.mandated.days` and `on.campus.housing` to be statistically significant across many of our models, even in those models constructed using Poisson regression in our sensitivity analysis. 
+Ultimately, we conclude that there is some association between the religious affiliation of a university and the Covid case counts that it reported during the fall 2020 semester — the relationship between these two variables, however, is nuanced, with interaction effects between `religious` and other predictors in our data set playing a large part. In particular, we found that the interactions between `religious` and each of  `mask.mandated.days` and `on.campus.housing` to be statistically significant across many of our models, even in those models constructed using Poisson regression in our sensitivity analysis. 
 
 We found the interaction between `mask.mandated.days` and `religious` to be statistically significant in all but the forward step model beginning from the intercept, LASSO-Selected Model 2, and the Poisson regression versions of the `fullInteraction` and the second LASSO-Selected linear models. In most models, the coefficient estimate of this interactive effect was approximately 0.002. This small but positive value indicates that a religious affiliation is associated with a greater change in the number of cases that we would expect from a university if `mask.mandated.days` were to increase in the state in which that university is located, compared to a school with the same predictor set but with no religious affiliation. This indicates that state-mandated masking initiatives were disproportionately less effective for religious institutions, which could also be reflective of the fact that non-religious institutions also include public universities that may more strictly comply with masking mandates given their funding ties to state governments. 
 
-```{r, fig.height=3}
+```{r, fig.height=4}
 interaction.plot(
   x.factor = full.cases$mask.mandated.days,
   trace.factor = full.cases$religious,
   response = full.cases$cases,
   fun = median,
-  main = "Plotting Mask-mandated Days versus 2020 Covid Cases",
+  main = "Mask-Mandated Days versus 2020 Covid Cases",
   sub = "Description: An interaction model sorted by religious affiliation",
   ylab = "2020 Covid-19 Cases",
   xlab = "Mask-mandated Days",
   trace.label = "Religious",
   col = c("#0198f9", "#f95801"),
-  lwd = 3
+  lwd = 3,
+  cex = 0.5
 )
 
 ```
 
 The interaction model pictured visually displays some of the relationship we have found between the interaction `religiousYes:mask.mandated.days` and 2020 Covid-19 cases. The plot peaks just below 205 mask-mandated days, which corresponds to Utah and/or New Hampshire. We see that in perhaps just a couple of states with around 175 mask-mandated days, religious institutions have significantly higher numbers of Covid-19 cases than their non-religious counterparts. Note that this visual does not take into account confounding variables, whereas the models we discussed do.  
 
-Likewise, the interaction between `on.campus.housing` and `religious` was statistically significant in all but the forward step model beginning from the intercept, LASSO-Selected Model 2, and the Poisson regression version of the latter. Across all models, the coefficient estimates for this interactive effect ranged from about -1.71 to about -1.28; interestingly, this can be interpreted as an indication that a religious affiliation decreases the expected change in cases that we would expect from if a given school were to offer on campus housing, compared to if that school were to not offer on campus housing to its students. 
+Likewise, the interaction between `on.campus.housing` and `religious` was statistically significant in all but the forward step model beginning from the intercept, LASSO-Selected Model 2, and the Poisson regression version of the latter. Across all models, the coefficient estimates for this interactive effect ranged from about -1.71 to about -1.28; interestingly, this can be interpreted as an indication that a religious affiliation decreases the expected change in cases that we would expect if a given school were to offer on campus housing, compared to if that school were to not offer on campus housing to its students. 
 
-With such strong evidence in favor of the statistical significance of both of these interactive effects, we are inclined to conclude that these interactive effects are indeed important. But is simply having a religious affiliation alone associated with changes in fall 2020 Covid case counts? We did not reach a clear conclusion with our analysis — there was disagreement between the models we considered in terms of the statistical significance of the linear effect of the `religious` predictor. While this predictor was statistically significant in the `religiousInteraction` model, our LASSO-Selected Linear Model 2, and the Poisson regression version of the latter, it was not statistically significant in the base model, the `fullInteraction` model, the any of the sequential variable selection models, our hierarchical model, or the Poisson regression versions of any of these models. Overall, because of this disagreement, and because the majority of models actually did not find the `religious` predictor to be statistically significant, we do not conclude that there is an association between whether a university has a religious affiliation and its reported fall 2020 Covid case counts. Rather, the relationship found between the religious affiliation of a university and its 2020 Covid-19 cases in certain models can likely be attributed to confounding social effects, and models that did not find a statistically significant relationship accounted for these confounding variables and interactions.
+With such strong evidence in favor of the statistical significance of both of these interactive effects, we are inclined to conclude that these interactive effects are indeed important. But is simply having a religious affiliation alone associated with changes in fall 2020 Covid case counts? We did not reach a clear conclusion with our analysis — there was disagreement between the models we considered in terms of the statistical significance of the linear effect of the `religious` predictor. While this predictor was statistically significant in the `religiousInteraction` model, LASSO-Selected Linear Model 2, and the Poisson regression version of the latter, it was not statistically significant in the base model, the `fullInteraction` model, the any of the sequential variable selection models, our hierarchical model, or the Poisson regression versions of any of these models. Overall, because of this disagreement, and because the majority of models actually did not find the `religious` predictor to be statistically significant, we do not conclude that there is an association between whether a university has a religious affiliation and its reported fall 2020 Covid case counts. Rather, the relationship found between the religious affiliation of a university and its 2020 Covid-19 cases in certain models can likely be attributed to confounding social effects, and models that did not find a statistically significant relationship accounted for these confounding variables and interactions.
 
-One of the most surprising results of our analysis was the absence of  `gap20repub` from our statistically significant results. Because the Covid-19 pandemic was such a politicized issue, we expected this predictor — which was a stand-in for the differences in Covid-19 policies between blue and red states —  to play a large role in our analysis. In reality, it never seemed to come up as important. This is not to say, however, that this predictor was entirely useless in this analysis — in fact, we believe that it played a large role in capturing potential confounding variables of the effect of religious affiliation on Covid case counts, even intangible variable that would have been difficult to capture quantitatively, such as prevailing attitudes as to the severity of the pandemic in a given state. In the end, though it did not play a very important role in this paper, we believe that the association between political attitudes or voting behaviors and Covid-19 case counts — at universities or at large — deserves its own dedicated exploration. 
+One of the most surprising results of our analysis was the absence of  `gap20repub` from our statistically significant results. Because the Covid-19 pandemic was such a politicized issue, we expected this predictor — which was a stand-in for the differences in Covid-19 policies between blue and red states —  to play a large role in our analysis with respect to religious affiliation. In reality, it never seemed to come up as important. Indeed, the only time that the interaction effect between `religious` and `gap20repub` was statistically significant was when we specifically isolated these two predictors in one of our hierarchical models; otherwise, this interaction effect never played a part. `gap20repub` itself — as well as interactions with predictors other than `religious` — was also not found to be statistically significant in many of our models. It is possible that our predictor `mask.mandated.days` captured enough information about the responses to the Covid-19 pandemic in each state to properly inform our models. This is not to say, however, that this predictor was entirely useless in this analysis — it was the only way that we were able to capture potential intangible confounding political variables that would have been difficult to capture quantitatively, such as prevailing attitudes as to the severity of the pandemic in a given state. In the end, though `gap20repub` did not play a very important part in the interaction effects explored in this paper, we believe that the association between political attitudes or voting behaviors and Covid-19 case counts — at universities or at large — deserves its own dedicated exploration. 
 
 
 
