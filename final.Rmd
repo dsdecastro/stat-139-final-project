@@ -857,8 +857,6 @@ colnames(aic.results) = c("Model", "AIC")
 aic.results
 ```
 
-We thought that the backward step model may be the worst for our data due to the high collinearity, as the procedure would force the model to consider and keep collinear variables because it starts with them. Conversely, a forward stepwise model could entirely omit them from the procedure. While the run time for the backward step model was the longest and is indicative of considering so many interactive terms, it has a similar AIC value to the forward step model from the base model (the model with the second-lowest AIC) and does not seem to differ much with variable significance from other models we considered in this section. 
-
 # LASSO for Variable Section
 
 Because sequential variable selection can be sensitive to outliers and high-leverage observations, and in order to get a better idea of which of the three sequential variable selection models might be the most reliable, we will employ an alternative to this method: LASSO. A penalized form of regression, LASSO is able to function as a method of variable selection, since, unlike ridge regression, it actually does shrink coefficient estimates to exactly zero. 
@@ -1034,13 +1032,18 @@ legend(x = "topright",
 
 ```
 
-Next we explore the relationship between `gap20repub` and `religious` and their interactive effect on 2020 Covid cases grouped by state (still using mixed effects, random intercept). We use random intercept models to do so, because of the way in which mixed effects models allow one to implement predictors at the group (state) level. `gap20repub` is unique by state, but does not take on a unique value in the institutions in each state. We formally test below whether the effect of university religious affiliation (on 2020 Covid cases) depends on `gap20repub`:
+Next we explore the relationship between `gap20repub` and `religious` and their interactive effect on 2020 Covid cases grouped by state (still using mixed effects, random intercept). We use random intercept models to do so, because of the way in which mixed effects models allow one to implement predictors at the group (state) level. `gap20repub` is unique by state, but does not take on a unique value in the institutions in each state. We formally test below whether the effect of university religious affiliation (on 2020 Covid cases) depends on `gap20repub`, i.e., whether including the interaction effect between `religious` and `gap20repub` adds statistically significant explanatory power to the model:
 
-```{r}
+\begin{center}
+```{r, render=lemon_print}
 lmer3 = lmer(log(cases+1)~gap20repub*religious+(1|state),data=full.cases,weights=total.headcount/1000, REML=FALSE)
 
 lmer3b = lmer(log(cases+1)~gap20repub+religious+(1|state),data=full.cases,weights=total.headcount/1000, REML=FALSE)
-anova(lmer3b,lmer3)
+
+anova.lmer <- anova(lmer3,lmer3b)
+data.frame <- c("Chi-Sq Statistic"=anova.lmer$Chisq[2], 
+                "Df"=anova.lmer$Df[2],
+                "p-value"=anova.lmer$`Pr(>Chisq)`[2])
 
 red_or_blue = function(gap){
   if (gap < 0) {
@@ -1060,8 +1063,31 @@ legend(x = "bottomright",          # Position
        lwd = 2) 
 
 ```
+\end{center}
 
-The result of the ESS-$F$ test between nested models mixed effects models (one with interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap20repub`. Though this was not flagged as a particularly significant interaction in the above models — probably because of collinearity between `gap20repub` and other predictors — it is not surprising, per se: It is clear that the `religious` significantly interacts with many other predictors.
+The result of the likelihood-ratio test between nested mixed effects models (one with the interactive effect, one without) indicates that there is evidence that the interaction between `gap20repub` and `religious` is significant in the predictive model, and the effect of religious affiliation upon 2020 Covid cases does depend on `gap20repub`. Though this was not flagged as a particularly significant interaction in the above models — probably because of collinearity between `gap20repub` and other predictors — it is not surprising, per se: It is clear that the `religious` significantly interacts with many other predictors.
+
+We recreate this analysis for `mask.mandated.days`, another predictor that varies at the state level, and again find, via the likelihood-ratio test, that the mixed-effects model with the interaction term between `religious` and `mask.mandated.days` adds significant explanatory power to the model: 
+
+\begin{center}
+```{r, eval=T}
+lmer4 = lmer(log(cases+1)~religious+mask.mandated.days+(1|state), 
+             data=full.cases,weights=total.headcount/1000, REML=FALSE)
+
+lmer5 = lmer(log(cases+1)~religious*mask.mandated.days+(1|state), 
+             data=full.cases,weights=total.headcount/1000, REML=FALSE)
+
+lmer.base = lmer(log(cases+1)~religious+(1|state), 
+             data=full.cases,weights=total.headcount/1000, REML=FALSE)
+
+anova.lmer <- anova(lmer4, lmer5)
+data.frame("Chi-Sq Statistic"=c(anova.lmer$Chisq[2]), 
+                "Df"=c(anova.lmer$Df[2]),
+                "p-value"=c(anova.lmer$`Pr(>Chisq)`[2]))
+```
+\end{center}
+
+Thus, in the context of these hierarchical models, both of these interaction effects appear to add significant explanatory power to the model (though not shown, both models above add significant explanatory power over the random intercept model with `religious` as the only predictor).
 
 # Sensitivity Analysis using Poisson Regression
 
@@ -1329,7 +1355,7 @@ Likewise, the interaction between `on.campus.housing` and `religious` was statis
 
 With such strong evidence in favor of the statistical significance of both of these interactive effects, we are inclined to conclude that these interactive effects are indeed important. But is simply having a religious affiliation alone associated with changes in fall 2020 Covid case counts? We did not reach a clear conclusion with our analysis — there was disagreement between the models we considered in terms of the statistical significance of the linear effect of the `religious` predictor. While this predictor was statistically significant in the `religiousInteraction` model, LASSO-Selected Linear Model 2, and the Poisson regression version of the latter, it was not statistically significant in the base model, the `fullInteraction` model, the any of the sequential variable selection models, our hierarchical model, or the Poisson regression versions of any of these models. Overall, because of this disagreement, and because the majority of models actually did not find the `religious` predictor to be statistically significant, we do not conclude that there is an association between whether a university has a religious affiliation and its reported fall 2020 Covid case counts. Rather, the relationship found between the religious affiliation of a university and its 2020 Covid-19 cases in certain models can likely be attributed to confounding social effects, and models that did not find a statistically significant relationship accounted for these confounding variables and interactions.
 
-One of the most surprising results of our analysis was the absence of  `gap20repub` from our statistically significant results. Because the Covid-19 pandemic was such a politicized issue, we expected this predictor — which was a stand-in for the differences in Covid-19 policies between blue and red states —  to play a large role in our analysis with respect to religious affiliation. In reality, it never seemed to come up as important. Indeed, the only time that the interaction effect between `religious` and `gap20repub` was statistically significant was when we specifically isolated these two predictors in one of our hierarchical models; otherwise, this interaction effect never played a part. `gap20repub` itself — as well as interactions with predictors other than `religious` — was also not found to be statistically significant in many of our models. It is possible that our predictor `mask.mandated.days` captured enough information about the responses to the Covid-19 pandemic in each state to properly inform our models. This is not to say, however, that this predictor was entirely useless in this analysis — it was the only way that we were able to capture potential intangible confounding political variables that would have been difficult to capture quantitatively, such as prevailing attitudes as to the severity of the pandemic in a given state. In the end, though `gap20repub` did not play a very important part in the interaction effects explored in this paper, we believe that the association between political attitudes or voting behaviors and Covid-19 case counts — at universities or at large — deserves its own dedicated exploration. 
+One of the most surprising results of our analysis was the absence of  `gap20repub` from our statistically significant results. Because the Covid-19 pandemic was such a politicized issue, we expected this predictor — which was a stand-in for the differences in Covid-19 policies between blue and red states —  to play a large role in our analysis with respect to religious affiliation. In reality, it never seemed to come up as important. Indeed, the only time that the interaction effect between `religious` and `gap20repub` was statistically significant was when we specifically isolated these two predictors in one of our simple random intercept models; otherwise, this interaction effect never played a major part. `gap20repub` itself — as well as interactions with predictors other than `religious` — was also not found to be statistically significant in many of our models. It is possible that our predictor `mask.mandated.days` captured enough information about the responses to the Covid-19 pandemic in each state to properly inform our models. This is not to say, however, that this predictor was entirely useless in this analysis — it was the only way that we were able to capture potential intangible confounding political variables that would have been difficult to capture quantitatively, such as prevailing attitudes as to the severity of the pandemic in a given state. In the end, though `gap20repub` did not play a very important part in the interaction effects explored in this paper, we believe that the association between political attitudes or voting behaviors and Covid-19 case counts — at universities or at large — deserves its own dedicated exploration. 
 
 
 
